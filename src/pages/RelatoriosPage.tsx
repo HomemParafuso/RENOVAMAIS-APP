@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
-import { Download, DollarSign, Users, BarChart2 } from "lucide-react";
+import { Download, DollarSign, Users, BarChart2, Zap } from "lucide-react";
 import { 
   LineChart, 
   Line, 
@@ -34,6 +34,15 @@ const RelatoriosPage = () => {
   ];
 
   const economiaData = [
+    { mes: 'dez/24', valor: 0 },
+    { mes: 'jan/25', valor: 0 },
+    { mes: 'fev/25', valor: 0 },
+    { mes: 'mar/25', valor: 0 },
+    { mes: 'abr/25', valor: 0 },
+    { mes: 'mai/25', valor: 0 },
+  ];
+
+  const geracaoData = [
     { mes: 'dez/24', valor: 0 },
     { mes: 'jan/25', valor: 0 },
     { mes: 'fev/25', valor: 0 },
@@ -72,7 +81,7 @@ const RelatoriosPage = () => {
       </div>
 
       <Tabs defaultValue="financeiro">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="financeiro" className="flex items-center justify-center">
             <DollarSign className="h-4 w-4 mr-2" />
             Financeiro
@@ -84,6 +93,10 @@ const RelatoriosPage = () => {
           <TabsTrigger value="operacional" className="flex items-center justify-center">
             <BarChart2 className="h-4 w-4 mr-2" />
             Operacional
+          </TabsTrigger>
+          <TabsTrigger value="geracao" className="flex items-center justify-center">
+            <Zap className="h-4 w-4 mr-2" />
+            Geração
           </TabsTrigger>
         </TabsList>
         <TabsContent value="financeiro">
@@ -145,6 +158,33 @@ const RelatoriosPage = () => {
         <TabsContent value="operacional">
           <div className="flex items-center justify-center h-[400px] text-gray-500">
             Esta seção está em desenvolvimento.
+          </div>
+        </TabsContent>
+        <TabsContent value="geracao">
+          <div className="mt-4">
+            <Card className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-medium">Geração de Energia por Mês (kWh)</h3>
+                <Button variant="outline" size="sm">
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportar
+                </Button>
+              </div>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart 
+                    data={geracaoData}
+                    margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="mes" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="valor" name="Geração (kWh)" fill="#f59e0b" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
           </div>
         </TabsContent>
       </Tabs>

@@ -19,8 +19,32 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/components/ui/use-toast";
 
 const ConfiguracoesPage = () => {
+  const { toast } = useToast();
+
+  const handleSaveGeral = () => {
+    toast({
+      title: "Configurações gerais salvas",
+      description: "As configurações gerais foram salvas com sucesso!",
+    });
+  };
+
+  const handleSaveTarifas = () => {
+    toast({
+      title: "Configurações de tarifas salvas",
+      description: "As configurações de tarifas foram salvas com sucesso!",
+    });
+  };
+
+  const handleSaveNotificacoes = () => {
+    toast({
+      title: "Configurações de notificações salvas",
+      description: "As configurações de notificações foram salvas com sucesso!",
+    });
+  };
+
   return (
     <div className="p-8">
       <div className="flex justify-between items-center mb-6">
@@ -28,7 +52,6 @@ const ConfiguracoesPage = () => {
           <h1 className="text-2xl font-bold">Configurações</h1>
           <p className="text-muted-foreground">Personalize as configurações do seu sistema</p>
         </div>
-        <Button className="bg-green-600 hover:bg-green-700">Salvar Alterações</Button>
       </div>
 
       <Tabs defaultValue="geral">
@@ -50,7 +73,7 @@ const ConfiguracoesPage = () => {
             <CardContent className="space-y-4">
               <div>
                 <Label htmlFor="nomeEmpresa">Nome da Empresa</Label>
-                <Input id="nomeEmpresa" placeholder="Nome da sua empresa" />
+                <Input id="nomeEmpresa" placeholder="Nome da sua empresa" defaultValue="Renova Mais Energia" />
               </div>
               <div>
                 <Label htmlFor="cnpj">CNPJ</Label>
@@ -70,38 +93,11 @@ const ConfiguracoesPage = () => {
                 <Label htmlFor="endereco">Endereço</Label>
                 <Input id="endereco" placeholder="Endereço completo" />
               </div>
-            </CardContent>
-          </Card>
 
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>Personalização</CardTitle>
-              <CardDescription>
-                Personalize a aparência do sistema e documentos gerados.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="corPrimaria">Cor Primária</Label>
-                  <div className="flex gap-2">
-                    <Input id="corPrimaria" defaultValue="#22C55E" className="flex-1" />
-                    <div className="w-10 h-10 rounded bg-green-500 border"></div>
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="corSecundaria">Cor Secundária</Label>
-                  <div className="flex gap-2">
-                    <Input id="corSecundaria" defaultValue="#64748B" className="flex-1" />
-                    <div className="w-10 h-10 rounded bg-gray-500 border"></div>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="logo">Logo da Empresa</Label>
-                <div className="mt-1">
-                  <Button variant="outline">Fazer Upload</Button>
-                </div>
+              <div className="flex justify-end">
+                <Button className="bg-green-600 hover:bg-green-700" onClick={handleSaveGeral}>
+                  Salvar Alterações
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -126,53 +122,11 @@ const ConfiguracoesPage = () => {
                   <Input id="tarifaEnergia" type="number" placeholder="0.00" />
                 </div>
               </div>
-              <div>
-                <Label htmlFor="concessionaria">Concessionária</Label>
-                <Select>
-                  <SelectTrigger id="concessionaria">
-                    <SelectValue placeholder="Selecione a concessionária" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="enel">Enel</SelectItem>
-                    <SelectItem value="light">Light</SelectItem>
-                    <SelectItem value="cemig">Cemig</SelectItem>
-                    <SelectItem value="copel">Copel</SelectItem>
-                    <SelectItem value="outra">Outra</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
 
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>Cálculos Padrão</CardTitle>
-              <CardDescription>
-                Defina os valores padrão para novos clientes e faturas.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="tipoCalculo">Tipo de Cálculo Padrão</Label>
-                  <Select defaultValue="percentual">
-                    <SelectTrigger id="tipoCalculo">
-                      <SelectValue placeholder="Selecione o tipo de cálculo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="percentual">Percentual de Economia</SelectItem>
-                      <SelectItem value="valor">Valor Fixo</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="percentualDesconto">Percentual de Desconto Padrão</Label>
-                  <Input id="percentualDesconto" type="number" placeholder="10%" />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="observacaoPadrao">Observação Padrão para Faturas</Label>
-                <Textarea id="observacaoPadrao" placeholder="Texto padrão que aparecerá nas faturas" />
+              <div className="flex justify-end">
+                <Button className="bg-green-600 hover:bg-green-700" onClick={handleSaveTarifas}>
+                  Salvar Alterações
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -194,7 +148,7 @@ const ConfiguracoesPage = () => {
                 </div>
                 <div>
                   <Label htmlFor="nomeRemetente">Nome do Remetente</Label>
-                  <Input id="nomeRemetente" placeholder="Nome da Empresa" />
+                  <Input id="nomeRemetente" placeholder="Nome da Empresa" defaultValue="Renova Mais Energia" />
                 </div>
               </div>
               <div className="flex items-center space-x-2">
@@ -227,6 +181,12 @@ const ConfiguracoesPage = () => {
                   placeholder="Olá {nome}, lembre-se que sua fatura vence em {dias} dias..."
                   className="min-h-[100px]"
                 />
+              </div>
+
+              <div className="flex justify-end">
+                <Button className="bg-green-600 hover:bg-green-700" onClick={handleSaveNotificacoes}>
+                  Salvar Alterações
+                </Button>
               </div>
             </CardContent>
           </Card>

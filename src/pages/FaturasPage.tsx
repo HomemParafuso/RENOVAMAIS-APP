@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -8,21 +8,72 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Search, RefreshCw, MoreVertical, Eye, Edit, Bell, Download, QrCode } from "lucide-react";
+import { Search, RefreshCw, MoreVertical, Eye, Edit, Bell, Download, QrCode, Share2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import NovaFaturaModal from "@/components/fatura/NovaFaturaModal";
+import DetalheFaturaModal from "@/components/fatura/DetalheFaturaModal";
+import { useToast } from "@/components/ui/use-toast";
+
+interface Fatura {
+  id: number;
+  cliente: string;
+  referencia: string;
+  vencimento: string;
+  valor: string;
+  status: string;
+  notificado: boolean;
+}
 
 const FaturasPage = () => {
-  const faturas = [
+  const [isNovaFaturaModalOpen, setIsNovaFaturaModalOpen] = useState(false);
+  const [isDetalhesFaturaModalOpen, setIsDetalhesFaturaModalOpen] = useState(false);
+  const [faturaAtual, setFaturaAtual] = useState<Fatura | undefined>(undefined);
+  const { toast } = useToast();
+
+  const faturas: Fatura[] = [
     {
       id: 1,
-      cliente: "Cliente não encontrado",
-      referencia: "",
-      vencimento: "Não definido",
-      valor: "R$ 0,00",
+      cliente: "Pablio Tacyanno",
+      referencia: "05/2025",
+      vencimento: "10/05/2025",
+      valor: "R$ 150,00",
       status: "Pendente",
       notificado: false
     }
   ];
+
+  const handleVerDetalhes = (fatura: Fatura) => {
+    setFaturaAtual(fatura);
+    setIsDetalhesFaturaModalOpen(true);
+  };
+
+  const handleNotificarCliente = (fatura: Fatura) => {
+    toast({
+      title: "Cliente notificado",
+      description: `Notificação enviada para ${fatura.cliente} sobre a fatura de ${fatura.referencia}.`,
+    });
+  };
+
+  const handleDownloadFatura = (fatura: Fatura) => {
+    toast({
+      title: "Download iniciado",
+      description: `Download da fatura de ${fatura.referencia} iniciado.`,
+    });
+  };
+
+  const handleGerarQRCode = (fatura: Fatura) => {
+    toast({
+      title: "QR Code gerado",
+      description: `QR Code gerado para a fatura de ${fatura.referencia}.`,
+    });
+  };
+
+  const handleCompartilharFatura = (fatura: Fatura) => {
+    toast({
+      title: "Link de compartilhamento gerado",
+      description: `A fatura de ${fatura.referencia} está pronta para ser compartilhada.`,
+    });
+  };
 
   return (
     <div className="p-8">
@@ -31,7 +82,7 @@ const FaturasPage = () => {
           <h1 className="text-2xl font-bold">Faturas</h1>
           <p className="text-muted-foreground">Gerencie todas as faturas da sua usina solar</p>
         </div>
-        <Button className="bg-green-600 hover:bg-green-700">
+        <Button className="bg-green-600 hover:bg-green-700" onClick={() => setIsNovaFaturaModalOpen(true)}>
           <span className="mr-2">+</span>
           Nova Fatura
         </Button>
@@ -108,25 +159,29 @@ const FaturasPage = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleVerDetalhes(fatura)}>
                     <Eye className="h-4 w-4 mr-2" />
                     Ver Detalhes
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleNotificarCliente(fatura)}>
+                    <Bell className="h-4 w-4 mr-2" />
+                    Notificar Cliente
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleDownloadFatura(fatura)}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Download Fatura
                   </DropdownMenuItem>
                   <DropdownMenuItem>
                     <Edit className="h-4 w-4 mr-2" />
                     Editar
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Bell className="h-4 w-4 mr-2" />
-                    Notificar Cliente
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleGerarQRCode(fatura)}>
                     <QrCode className="h-4 w-4 mr-2" />
                     Gerar QR Code
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Download className="h-4 w-4 mr-2" />
-                    Download Fatura
+                  <DropdownMenuItem onClick={() => handleCompartilharFatura(fatura)}>
+                    <Share2 className="h-4 w-4 mr-2" />
+                    Compartilhar
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -134,6 +189,17 @@ const FaturasPage = () => {
           </div>
         ))}
       </div>
+
+      <NovaFaturaModal 
+        isOpen={isNovaFaturaModalOpen} 
+        onClose={() => setIsNovaFaturaModalOpen(false)} 
+      />
+
+      <DetalheFaturaModal 
+        isOpen={isDetalhesFaturaModalOpen}
+        onClose={() => setIsDetalhesFaturaModalOpen(false)}
+        fatura={faturaAtual}
+      />
     </div>
   );
 };

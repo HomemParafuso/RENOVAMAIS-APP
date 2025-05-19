@@ -9,6 +9,7 @@ import NotFound from "./pages/NotFound";
 import Layout from "./components/layout/Layout";
 import Dashboard from "./pages/Dashboard";
 import ClientesPage from "./pages/ClientesPage";
+import GeradorasPage from "./pages/GeradorasPage";
 import FaturasPage from "./pages/FaturasPage";
 import RelatoriosPage from "./pages/RelatoriosPage";
 import ConfiguracoesPage from "./pages/ConfiguracoesPage";
@@ -24,6 +25,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Layout><Dashboard /></Layout>} />
           <Route path="/clientes" element={<Layout><ClientesPage /></Layout>} />
+          <Route path="/geradoras" element={<Layout><GeradorasPage /></Layout>} />
           <Route path="/faturas" element={<Layout><FaturasPage /></Layout>} />
           <Route path="/relatorios" element={<Layout><RelatoriosPage /></Layout>} />
           <Route path="/configuracoes" element={<Layout><ConfiguracoesPage /></Layout>} />
