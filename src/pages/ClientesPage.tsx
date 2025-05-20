@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MoreVertical, Search, RefreshCw, Eye, Edit, Send } from "lucide-react";
+import { MoreVertical, Search, Eye, Edit, Send } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,11 +11,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import EditarClienteModal from "@/components/cliente/EditarClienteModal";
+import NovoClienteModal from "@/components/cliente/NovoClienteModal";
 import { useToast } from "@/components/ui/use-toast";
 
 const ClientesPage = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isNovoClienteModalOpen, setIsNovoClienteModalOpen] = useState(false);
   const { toast } = useToast();
 
   const clientes = [
@@ -42,7 +44,10 @@ const ClientesPage = () => {
           <h1 className="text-2xl font-bold">Gerenciamento de Clientes</h1>
           <p className="text-muted-foreground">Cadastre e gerencie os clientes da sua usina solar</p>
         </div>
-        <Button className="bg-green-600 hover:bg-green-700">
+        <Button 
+          className="bg-green-600 hover:bg-green-700"
+          onClick={() => setIsNovoClienteModalOpen(true)}
+        >
           <span className="mr-2">+</span>
           Novo Cliente
         </Button>
@@ -67,10 +72,6 @@ const ClientesPage = () => {
             <SelectItem value="pendente">Pendente</SelectItem>
           </SelectContent>
         </Select>
-        <Button variant="outline" className="flex items-center gap-2">
-          <RefreshCw className="h-4 w-4" />
-          Atualizar
-        </Button>
       </div>
 
       <div className="bg-white rounded-md border">
@@ -134,6 +135,11 @@ const ClientesPage = () => {
         isOpen={isEditModalOpen} 
         onClose={() => setIsEditModalOpen(false)}
         isViewOnly={false}
+      />
+      
+      <NovoClienteModal
+        isOpen={isNovoClienteModalOpen}
+        onClose={() => setIsNovoClienteModalOpen(false)}
       />
     </div>
   );

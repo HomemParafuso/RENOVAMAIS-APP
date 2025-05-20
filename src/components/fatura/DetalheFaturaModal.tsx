@@ -9,6 +9,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
+import { Download, FileText } from "lucide-react";
 
 interface Fatura {
   id: number;
@@ -34,6 +35,13 @@ const DetalheFaturaModal = ({
     toast({
       title: "Download iniciado",
       description: "O download da fatura foi iniciado.",
+    });
+  };
+
+  const handleDownloadResumo = () => {
+    toast({
+      title: "Download do resumo iniciado",
+      description: "O download do resumo de cálculo foi iniciado.",
     });
   };
 
@@ -86,20 +94,40 @@ const DetalheFaturaModal = ({
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">Valor base (TU+TE)</span>
-                    <span className="text-sm">R$ 0,00</span>
+                    <span className="text-sm">R$ 180,00</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Desconto ({fatura.cliente ? "10%" : "0%"})</span>
-                    <span className="text-sm">- R$ 0,00</span>
+                    <span className="text-sm text-gray-600">Desconto (10%)</span>
+                    <span className="text-sm text-green-600">- R$ 18,00</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">Iluminação pública</span>
-                    <span className="text-sm">R$ 0,00</span>
+                    <span className="text-sm">R$ 8,00</span>
                   </div>
                   <div className="border-t border-gray-200 pt-2 mt-2 flex justify-between">
                     <span className="text-sm font-medium">Valor total</span>
                     <span className="text-sm font-medium">{fatura.valor}</span>
                   </div>
+                </div>
+                
+                <div className="mt-4 p-3 border border-gray-200 rounded-md bg-white flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="bg-gray-100 p-2 rounded-md mr-3">
+                      <FileText className="h-5 w-5 text-gray-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">QR Code e Resumo</p>
+                      <p className="text-xs text-gray-500">Compartilhe o pagamento facilmente</p>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleDownloadResumo}
+                  >
+                    <Download className="h-4 w-4 mr-1" />
+                    Baixar
+                  </Button>
                 </div>
               </div>
             </>
@@ -113,6 +141,7 @@ const DetalheFaturaModal = ({
             <Button variant="outline">Fechar</Button>
           </DialogClose>
           <Button onClick={handleDownload} className="bg-green-600 hover:bg-green-700">
+            <Download className="h-4 w-4 mr-2" />
             Download da Fatura
           </Button>
         </div>

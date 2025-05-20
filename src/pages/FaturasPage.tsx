@@ -12,6 +12,7 @@ import { Search, RefreshCw, MoreVertical, Eye, Edit, Bell, Download, QrCode, Sha
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import NovaFaturaModal from "@/components/fatura/NovaFaturaModal";
 import DetalheFaturaModal from "@/components/fatura/DetalheFaturaModal";
+import QrCodeFaturaModal from "@/components/fatura/QrCodeFaturaModal";
 import { useToast } from "@/components/ui/use-toast";
 
 interface Fatura {
@@ -27,6 +28,7 @@ interface Fatura {
 const FaturasPage = () => {
   const [isNovaFaturaModalOpen, setIsNovaFaturaModalOpen] = useState(false);
   const [isDetalhesFaturaModalOpen, setIsDetalhesFaturaModalOpen] = useState(false);
+  const [isQrCodeModalOpen, setIsQrCodeModalOpen] = useState(false);
   const [faturaAtual, setFaturaAtual] = useState<Fatura | undefined>(undefined);
   const { toast } = useToast();
 
@@ -47,6 +49,14 @@ const FaturasPage = () => {
     setIsDetalhesFaturaModalOpen(true);
   };
 
+  const handleEditarFatura = (fatura: Fatura) => {
+    setFaturaAtual(fatura);
+    toast({
+      title: "Edição de fatura",
+      description: `A edição da fatura será implementada em breve.`,
+    });
+  };
+
   const handleNotificarCliente = (fatura: Fatura) => {
     toast({
       title: "Cliente notificado",
@@ -62,10 +72,8 @@ const FaturasPage = () => {
   };
 
   const handleGerarQRCode = (fatura: Fatura) => {
-    toast({
-      title: "QR Code gerado",
-      description: `QR Code gerado para a fatura de ${fatura.referencia}.`,
-    });
+    setFaturaAtual(fatura);
+    setIsQrCodeModalOpen(true);
   };
 
   const handleCompartilharFatura = (fatura: Fatura) => {
@@ -171,7 +179,7 @@ const FaturasPage = () => {
                     <Download className="h-4 w-4 mr-2" />
                     Download Fatura
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleEditarFatura(fatura)}>
                     <Edit className="h-4 w-4 mr-2" />
                     Editar
                   </DropdownMenuItem>
@@ -198,6 +206,12 @@ const FaturasPage = () => {
       <DetalheFaturaModal 
         isOpen={isDetalhesFaturaModalOpen}
         onClose={() => setIsDetalhesFaturaModalOpen(false)}
+        fatura={faturaAtual}
+      />
+
+      <QrCodeFaturaModal
+        isOpen={isQrCodeModalOpen}
+        onClose={() => setIsQrCodeModalOpen(false)}
         fatura={faturaAtual}
       />
     </div>

@@ -10,13 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Search, RefreshCw, MoreVertical, Eye, Edit, Users, Zap } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogClose,
-} from "@/components/ui/dialog";
+import DetalhesGeradoraModal from "@/components/geradora/DetalhesGeradoraModal";
 import { useToast } from "@/components/ui/use-toast";
 
 interface Geradora {
@@ -30,7 +24,7 @@ interface Geradora {
 
 const GeradorasPage = () => {
   const [isDetalheGeradoraModalOpen, setIsDetalheGeradoraModalOpen] = useState(false);
-  const [geradoraSelecionada, setGeradoraSelecionada] = useState<Geradora | null>(null);
+  const [geradoraSelecionada, setGeradoraSelecionada] = useState<Geradora | undefined>(undefined);
   const { toast } = useToast();
 
   const geradoras: Geradora[] = [
@@ -47,6 +41,20 @@ const GeradorasPage = () => {
   const handleVerDetalhes = (geradora: Geradora) => {
     setGeradoraSelecionada(geradora);
     setIsDetalheGeradoraModalOpen(true);
+  };
+
+  const handleEditar = (geradora: Geradora) => {
+    toast({
+      title: "Editar Geradora",
+      description: `Função de edição para ${geradora.nome} será implementada em breve.`
+    });
+  };
+
+  const handleGerenciarClientes = (geradora: Geradora) => {
+    toast({
+      title: "Gerenciar Clientes",
+      description: `Gerenciamento de clientes para ${geradora.nome} será implementado em breve.`
+    });
   };
 
   return (
@@ -125,11 +133,11 @@ const GeradorasPage = () => {
                     <Eye className="h-4 w-4 mr-2" />
                     Ver Detalhes
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleEditar(geradora)}>
                     <Edit className="h-4 w-4 mr-2" />
                     Editar
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleGerenciarClientes(geradora)}>
                     <Users className="h-4 w-4 mr-2" />
                     Gerenciar Clientes
                   </DropdownMenuItem>
@@ -140,73 +148,11 @@ const GeradorasPage = () => {
         ))}
       </div>
 
-      {/* Modal de detalhes da geradora */}
-      <Dialog open={isDetalheGeradoraModalOpen} onOpenChange={setIsDetalheGeradoraModalOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Detalhes da Geradora</DialogTitle>
-          </DialogHeader>
-          
-          {geradoraSelecionada && (
-            <div className="space-y-4 mt-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Nome</p>
-                  <p className="text-base">{geradoraSelecionada.nome}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Potência</p>
-                  <p className="text-base">{geradoraSelecionada.potencia}</p>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Localização</p>
-                  <p className="text-base">{geradoraSelecionada.localizacao}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Status</p>
-                  <p className="text-base">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      {geradoraSelecionada.status}
-                    </span>
-                  </p>
-                </div>
-              </div>
-              
-              <div>
-                <p className="text-sm font-medium text-gray-500">Clientes Vinculados</p>
-                <p className="text-base">{geradoraSelecionada.clientesVinculados}</p>
-              </div>
-              
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm font-medium text-gray-700 mb-2">Detalhes Técnicos</p>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Módulos</span>
-                    <span className="text-sm">1500 x 330W</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Inversores</span>
-                    <span className="text-sm">25 x 20kW</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Área</span>
-                    <span className="text-sm">5.000 m²</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          <div className="flex justify-end gap-3 mt-6">
-            <DialogClose asChild>
-              <Button variant="outline">Fechar</Button>
-            </DialogClose>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <DetalhesGeradoraModal
+        isOpen={isDetalheGeradoraModalOpen}
+        onClose={() => setIsDetalheGeradoraModalOpen(false)}
+        geradora={geradoraSelecionada}
+      />
     </div>
   );
 };
