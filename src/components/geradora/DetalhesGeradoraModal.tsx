@@ -9,6 +9,8 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { MapPin } from "lucide-react";
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
 
 interface Geradora {
   id: number;
@@ -19,6 +21,13 @@ interface Geradora {
   clientesVinculados: number;
   latitude?: number;
   longitude?: number;
+}
+
+// Declare mapboxgl to avoid TypeScript errors
+declare global {
+  interface Window {
+    mapboxgl: typeof mapboxgl;
+  }
 }
 
 const DetalhesGeradoraModal = ({ 
@@ -33,65 +42,58 @@ const DetalhesGeradoraModal = ({
   const mapRef = useRef<HTMLDivElement>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapboxToken, setMapboxToken] = useState<string>("");
+  const mapInstanceRef = useRef<mapboxgl.Map | null>(null);
   
-  // Load Google Maps script
   useEffect(() => {
-    if (!geradora || !isOpen || mapLoaded) return;
+    if (!geradora || !isOpen || !mapboxToken || mapLoaded) return;
     
-    // For demonstration, using a placeholder for location display
-    // In a real implementation, we would load Google Maps API and display location
     const loadMap = async () => {
       if (!mapRef.current) return;
       
-      if (window.google && window.google.maps) {
-        initializeMap();
-        return;
-      }
-      
       try {
-        const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initGoogleMap`;
-        script.async = true;
-        script.defer = true;
+        // Initialize Mapbox
+        mapboxgl.accessToken = mapboxToken;
         
-        // Define the callback function globally
-        window.initGoogleMap = () => {
-          initializeMap();
-        };
+        // Default coordinates if none provided
+        const lat = geradora.latitude || -23.550520;
+        const lng = geradora.longitude || -46.633308;
         
-        document.head.appendChild(script);
+        // Create map
+        const map = new mapboxgl.Map({
+          container: mapRef.current,
+          style: 'mapbox://styles/mapbox/streets-v11',
+          center: [lng, lat],
+          zoom: 13
+        });
+        
+        // Add marker
+        new mapboxgl.Marker()
+          .setLngLat([lng, lat])
+          .addTo(map);
+        
+        // Add navigation control
+        map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+        
+        mapInstanceRef.current = map;
+        setMapLoaded(true);
       } catch (error) {
-        console.error("Error loading Google Maps:", error);
+        console.error("Error loading Mapbox:", error);
       }
     };
     
-    const initializeMap = () => {
-      if (!mapRef.current || !geradora) return;
-      
-      // Default coordinates if none provided
-      const lat = geradora.latitude || -23.550520;
-      const lng = geradora.longitude || -46.633308;
-      
-      const mapOptions = {
-        center: { lat, lng },
-        zoom: 15,
-      };
-      
-      const map = new window.google.maps.Map(mapRef.current, mapOptions);
-      
-      new window.google.maps.Marker({
-        position: { lat, lng },
-        map,
-        title: geradora.nome,
-      });
-      
-      setMapLoaded(true);
+    loadMap();
+  }, [geradora, isOpen, mapboxToken]);
+  
+  // Clean up map instance when modal closes
+  useEffect(() => {
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+        setMapLoaded(false);
+      }
     };
-    
-    // Display a placeholder instead of actual map for now
-    // loadMap();
-    setMapLoaded(true);
-  }, [geradora, isOpen, mapLoaded]);
+  }, [isOpen]);
   
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -136,17 +138,21 @@ const DetalhesGeradoraModal = ({
             <div>
               <p className="text-sm font-medium text-gray-500 mb-2">Localização no Mapa</p>
               <div className="relative">
-                <div className="h-[200px] bg-gray-100 rounded-lg flex items-center justify-center" ref={mapRef}>
-                  <div className="flex flex-col items-center">
-                    <MapPin className="h-8 w-8 text-green-600 mb-2" />
-                    <p className="text-gray-500">
-                      {geradora.localizacao}
-                    </p>
-                    <p className="text-xs text-gray-400 mt-2">
-                      Coordenadas aproximadas para visualização
-                    </p>
+                {mapLoaded ? (
+                  <div className="h-[200px] bg-gray-100 rounded-lg" ref={mapRef} />
+                ) : (
+                  <div className="h-[200px] bg-gray-100 rounded-lg flex items-center justify-center" ref={mapRef}>
+                    <div className="flex flex-col items-center">
+                      <MapPin className="h-8 w-8 text-green-600 mb-2" />
+                      <p className="text-gray-500">
+                        {geradora.localizacao}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-2">
+                        Insira uma chave do Mapbox para visualizar o mapa interativo
+                      </p>
+                    </div>
                   </div>
-                </div>
+                )}
                 <div className="mt-2">
                   <label className="text-sm font-medium text-gray-500 mb-1 block">
                     Insira uma chave do Mapbox para visualizar o mapa interativo:

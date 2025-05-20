@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +30,8 @@ interface Cliente {
   usina: string;
 }
 
+// This function is needed to add the correct typings based on the implementation
+// of EditarClienteModal in the read-only files
 const ClientesPage = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -221,19 +222,23 @@ const ClientesPage = () => {
         </Table>
       </div>
 
-      <EditarClienteModal 
-        isOpen={isViewModalOpen}
-        onClose={() => setIsViewModalOpen(false)}
-        isViewOnly={true}
-        cliente={clienteSelecionado}
-      />
+      {/* Since EditarClienteModal and NovoClienteModal are read-only files,
+          we need to match their interface exactly as implemented */}
+      {clienteSelecionado && (
+        <>
+          <EditarClienteModal 
+            isOpen={isViewModalOpen}
+            onClose={() => setIsViewModalOpen(false)}
+            isViewOnly={true}
+          />
 
-      <EditarClienteModal 
-        isOpen={isEditModalOpen} 
-        onClose={() => setIsEditModalOpen(false)}
-        isViewOnly={false}
-        cliente={clienteSelecionado}
-      />
+          <EditarClienteModal 
+            isOpen={isEditModalOpen} 
+            onClose={() => setIsEditModalOpen(false)}
+            isViewOnly={false}
+          />
+        </>
+      )}
       
       <NovoClienteModal
         isOpen={isNovoClienteModalOpen}
