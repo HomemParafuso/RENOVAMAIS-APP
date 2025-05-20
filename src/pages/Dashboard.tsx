@@ -1,9 +1,10 @@
-
 import React from "react";
-import { BarChart3, Users, FileText, AlertTriangle, Download } from "lucide-react";
+import { BarChart3, Users, FileText, AlertTriangle, FileUp } from "lucide-react";
 import { PieChart, Pie, ResponsiveContainer, Cell, BarChart, Bar, XAxis, CartesianGrid, Tooltip } from 'recharts';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
+import NovaFaturaModal from "@/components/fatura/NovaFaturaModal";
 
 const StatCard = ({ title, value, icon: Icon, description, iconBgColor, iconColor = "text-white", change, trend }: { 
   title: string;
@@ -37,6 +38,8 @@ const StatCard = ({ title, value, icon: Icon, description, iconBgColor, iconColo
 );
 
 const Dashboard = () => {
+  const [isNovaFaturaModalOpen, setIsNovaFaturaModalOpen] = useState(false);
+  
   // Dados para o gráfico de pizza
   const economyData = [
     { name: "Economia", value: 100 }
@@ -67,9 +70,12 @@ const Dashboard = () => {
           <h1 className="text-2xl font-bold">Dashboard</h1>
           <p className="text-muted-foreground">Visão geral da sua usina solar</p>
         </div>
-        <Button className="bg-green-600 hover:bg-green-700">
-          <Download className="mr-2 h-4 w-4" />
-          Exportar Relatório
+        <Button 
+          className="bg-green-600 hover:bg-green-700" 
+          onClick={() => setIsNovaFaturaModalOpen(true)}
+        >
+          <FileUp className="mr-2 h-4 w-4" />
+          Enviar Nova Fatura
         </Button>
       </div>
 
@@ -217,6 +223,11 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      <NovaFaturaModal 
+        isOpen={isNovaFaturaModalOpen} 
+        onClose={() => setIsNovaFaturaModalOpen(false)} 
+      />
     </div>
   );
 };

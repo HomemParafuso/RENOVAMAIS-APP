@@ -11,6 +11,9 @@ import {
 import { Search, RefreshCw, MoreVertical, Eye, Edit, Users, Zap } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import DetalhesGeradoraModal from "@/components/geradora/DetalhesGeradoraModal";
+import NovaGeradoraModal from "@/components/geradora/NovaGeradoraModal";
+import EditarGeradoraModal from "@/components/geradora/EditarGeradoraModal";
+import GerenciarClientesModal from "@/components/geradora/GerenciarClientesModal";
 import { useToast } from "@/components/ui/use-toast";
 
 interface Geradora {
@@ -20,10 +23,15 @@ interface Geradora {
   localizacao: string;
   status: string;
   clientesVinculados: number;
+  marcaInversor?: string;
+  apiKey?: string;
 }
 
 const GeradorasPage = () => {
   const [isDetalheGeradoraModalOpen, setIsDetalheGeradoraModalOpen] = useState(false);
+  const [isNovaGeradoraModalOpen, setIsNovaGeradoraModalOpen] = useState(false);
+  const [isEditarGeradoraModalOpen, setIsEditarGeradoraModalOpen] = useState(false);
+  const [isGerenciarClientesModalOpen, setIsGerenciarClientesModalOpen] = useState(false);
   const [geradoraSelecionada, setGeradoraSelecionada] = useState<Geradora | undefined>(undefined);
   const { toast } = useToast();
 
@@ -34,7 +42,9 @@ const GeradorasPage = () => {
       potencia: "500 kWp",
       localizacao: "São Paulo, SP",
       status: "Ativo",
-      clientesVinculados: 25
+      clientesVinculados: 25,
+      marcaInversor: "fronius",
+      apiKey: "api123456"
     }
   ];
 
@@ -44,17 +54,17 @@ const GeradorasPage = () => {
   };
 
   const handleEditar = (geradora: Geradora) => {
-    toast({
-      title: "Editar Geradora",
-      description: `Função de edição para ${geradora.nome} será implementada em breve.`
-    });
+    setGeradoraSelecionada(geradora);
+    setIsEditarGeradoraModalOpen(true);
   };
 
   const handleGerenciarClientes = (geradora: Geradora) => {
-    toast({
-      title: "Gerenciar Clientes",
-      description: `Gerenciamento de clientes para ${geradora.nome} será implementado em breve.`
-    });
+    setGeradoraSelecionada(geradora);
+    setIsGerenciarClientesModalOpen(true);
+  };
+
+  const handleNovaGeradora = () => {
+    setIsNovaGeradoraModalOpen(true);
   };
 
   return (
@@ -64,7 +74,10 @@ const GeradorasPage = () => {
           <h1 className="text-2xl font-bold">Geradoras</h1>
           <p className="text-muted-foreground">Gerencie suas usinas geradoras de energia solar</p>
         </div>
-        <Button className="bg-green-600 hover:bg-green-700">
+        <Button 
+          className="bg-green-600 hover:bg-green-700" 
+          onClick={handleNovaGeradora}
+        >
           <span className="mr-2">+</span>
           Nova Geradora
         </Button>
@@ -151,6 +164,23 @@ const GeradorasPage = () => {
       <DetalhesGeradoraModal
         isOpen={isDetalheGeradoraModalOpen}
         onClose={() => setIsDetalheGeradoraModalOpen(false)}
+        geradora={geradoraSelecionada}
+      />
+      
+      <NovaGeradoraModal
+        isOpen={isNovaGeradoraModalOpen}
+        onClose={() => setIsNovaGeradoraModalOpen(false)}
+      />
+      
+      <EditarGeradoraModal
+        isOpen={isEditarGeradoraModalOpen}
+        onClose={() => setIsEditarGeradoraModalOpen(false)}
+        geradora={geradoraSelecionada}
+      />
+      
+      <GerenciarClientesModal
+        isOpen={isGerenciarClientesModalOpen}
+        onClose={() => setIsGerenciarClientesModalOpen(false)}
         geradora={geradoraSelecionada}
       />
     </div>

@@ -13,28 +13,90 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import EditarClienteModal from "@/components/cliente/EditarClienteModal";
 import NovoClienteModal from "@/components/cliente/NovoClienteModal";
 import { useToast } from "@/components/ui/use-toast";
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
+
+interface Cliente {
+  id: number;
+  nome: string;
+  cpf: string;
+  tipoCalculo: string;
+  status: string;
+  usina: string;
+}
 
 const ClientesPage = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isNovoClienteModalOpen, setIsNovoClienteModalOpen] = useState(false);
+  const [clienteSelecionado, setClienteSelecionado] = useState<Cliente | undefined>(undefined);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc" | null>(null);
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const clientes = [
+  const clientes: Cliente[] = [
     {
       id: 1,
       nome: "Pablio Tacyanno",
       cpf: "",
       tipoCalculo: "Percentual de Economia",
-      status: "Ativo"
+      status: "Ativo",
+      usina: "Usina Solar São Paulo I"
     }
   ];
 
-  const handleEnviarConvite = () => {
+  const handleEnviarConvite = (cliente: Cliente) => {
     toast({
       title: "Convite enviado",
       description: "O convite foi enviado para o cliente com sucesso!",
     });
+  };
+  
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      if (sortDirection === "asc") {
+        setSortDirection("desc");
+      } else if (sortDirection === "desc") {
+        setSortDirection(null);
+        setSortColumn(null);
+      } else {
+        setSortDirection("asc");
+      }
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+  
+  const sortedClientes = [...clientes].sort((a, b) => {
+    if (!sortColumn || !sortDirection) return 0;
+    
+    const aValue = a[sortColumn as keyof Cliente];
+    const bValue = b[sortColumn as keyof Cliente];
+    
+    if (typeof aValue === 'string' && typeof bValue === 'string') {
+      return sortDirection === "asc" 
+        ? aValue.localeCompare(bValue) 
+        : bValue.localeCompare(aValue);
+    }
+    
+    return 0;
+  });
+  
+  const handleViewClient = (cliente: Cliente) => {
+    setClienteSelecionado(cliente);
+    setIsViewModalOpen(true);
+  };
+  
+  const handleEditClient = (cliente: Cliente) => {
+    setClienteSelecionado(cliente);
+    setIsEditModalOpen(true);
   };
 
   return (
@@ -74,67 +136,103 @@ const ClientesPage = () => {
         </Select>
       </div>
 
-      <div className="bg-white rounded-md border">
-        <div className="grid grid-cols-5 px-6 py-3 border-b text-sm font-medium text-gray-500">
-          <div>Nome</div>
-          <div>CPF/CNPJ</div>
-          <div>Tipo de Cálculo</div>
-          <div>Status</div>
-          <div className="text-right">Ações</div>
-        </div>
-        
-        {clientes.map((cliente) => (
-          <div key={cliente.id} className="grid grid-cols-5 px-6 py-4 border-b last:border-0 items-center">
-            <div className="flex items-center">
-              <div className="h-8 w-8 bg-green-100 text-green-600 rounded-full flex items-center justify-center font-medium mr-3">
-                {cliente.nome.charAt(0)}
-              </div>
-              <span className="font-medium">{cliente.nome}</span>
-            </div>
-            <div>{cliente.cpf || '-'}</div>
-            <div>{cliente.tipoCalculo}</div>
-            <div>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                {cliente.status}
-              </span>
-            </div>
-            <div className="text-right">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <MoreVertical className="h-5 w-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setIsViewModalOpen(true)}>
-                    <Eye className="h-4 w-4 mr-2" />
-                    Ver Detalhes
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setIsEditModalOpen(true)}>
-                    <Edit className="h-4 w-4 mr-2" />
-                    Editar
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleEnviarConvite}>
-                    <Send className="h-4 w-4 mr-2" />
-                    Enviar Convite
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-        ))}
+      <div className="bg-white rounded-md border overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead 
+                className="cursor-pointer"
+                onClick={() => handleSort("nome")}
+              >
+                Nome {sortColumn === "nome" && (sortDirection === "asc" ? "↑" : sortDirection === "desc" ? "↓" : "")}
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer"
+                onClick={() => handleSort("cpf")}
+              >
+                CPF/CNPJ {sortColumn === "cpf" && (sortDirection === "asc" ? "↑" : sortDirection === "desc" ? "↓" : "")}
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer"
+                onClick={() => handleSort("tipoCalculo")}
+              >
+                Tipo de Cálculo {sortColumn === "tipoCalculo" && (sortDirection === "asc" ? "↑" : sortDirection === "desc" ? "↓" : "")}
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer"
+                onClick={() => handleSort("usina")}
+              >
+                Usina {sortColumn === "usina" && (sortDirection === "asc" ? "↑" : sortDirection === "desc" ? "↓" : "")}
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer"
+                onClick={() => handleSort("status")}
+              >
+                Status {sortColumn === "status" && (sortDirection === "asc" ? "↑" : sortDirection === "desc" ? "↓" : "")}
+              </TableHead>
+              <TableHead className="text-right">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {sortedClientes.map((cliente) => (
+              <TableRow key={cliente.id}>
+                <TableCell className="py-4">
+                  <div className="flex items-center">
+                    <div className="h-8 w-8 bg-green-100 text-green-600 rounded-full flex items-center justify-center font-medium mr-3">
+                      {cliente.nome.charAt(0)}
+                    </div>
+                    <span className="font-medium">{cliente.nome}</span>
+                  </div>
+                </TableCell>
+                <TableCell>{cliente.cpf || '-'}</TableCell>
+                <TableCell>{cliente.tipoCalculo}</TableCell>
+                <TableCell>{cliente.usina}</TableCell>
+                <TableCell>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    {cliente.status}
+                  </span>
+                </TableCell>
+                <TableCell className="text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreVertical className="h-5 w-5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleViewClient(cliente)}>
+                        <Eye className="h-4 w-4 mr-2" />
+                        Ver Detalhes
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleEditClient(cliente)}>
+                        <Edit className="h-4 w-4 mr-2" />
+                        Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleEnviarConvite(cliente)}>
+                        <Send className="h-4 w-4 mr-2" />
+                        Enviar Convite
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
 
       <EditarClienteModal 
         isOpen={isViewModalOpen}
         onClose={() => setIsViewModalOpen(false)}
         isViewOnly={true}
+        cliente={clienteSelecionado}
       />
 
       <EditarClienteModal 
         isOpen={isEditModalOpen} 
         onClose={() => setIsEditModalOpen(false)}
         isViewOnly={false}
+        cliente={clienteSelecionado}
       />
       
       <NovoClienteModal
