@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -54,6 +54,7 @@ const NovaFaturaModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
   const [leituraAtual, setLeituraAtual] = useState("");
   const [resumoCalculo, setResumoCalculo] = useState<ResumoCalculo | null>(null);
   const [clienteData, setClienteData] = useState<Cliente | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const { toast } = useToast();
   
@@ -127,6 +128,10 @@ const NovaFaturaModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
       description: "A fatura foi criada com sucesso!",
     });
     onClose();
+  };
+  
+  const handleSelectFileClick = () => {
+    fileInputRef.current?.click();
   };
   
   const handleUploadArquivo = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -297,19 +302,22 @@ const NovaFaturaModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
               <p className="mt-2 text-gray-600">Arraste e solte um arquivo PDF ou JPEG da fatura</p>
               <p className="text-xs text-gray-500 mt-1">ou</p>
               <div className="mt-4">
-                <label htmlFor="file-upload" className="relative cursor-pointer">
-                  <Button variant="outline" className="relative">
-                    Selecionar arquivo
-                    <input
-                      id="file-upload"
-                      name="file-upload"
-                      type="file"
-                      accept=".pdf,.jpg,.jpeg"
-                      className="sr-only"
-                      onChange={handleUploadArquivo}
-                    />
-                  </Button>
-                </label>
+                <input
+                  ref={fileInputRef}
+                  id="file-upload"
+                  name="file-upload"
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg"
+                  className="hidden"
+                  onChange={handleUploadArquivo}
+                />
+                <Button 
+                  variant="outline" 
+                  className="relative"
+                  onClick={handleSelectFileClick}
+                >
+                  Selecionar arquivo
+                </Button>
               </div>
             </div>
             

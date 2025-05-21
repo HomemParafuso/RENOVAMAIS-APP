@@ -97,6 +97,16 @@ const GeradorasPage = () => {
     );
     console.log("Geradora atualizada:", geradoraAtualizada);
   };
+  
+  // Excluir geradora
+  const handleDeleteGeradora = (geradora: Geradora) => {
+    setGeradoras(geradoras => geradoras.filter(g => g.id !== geradora.id));
+    toast({
+      title: "Geradora excluída",
+      description: `A geradora ${geradora.nome} foi excluída com sucesso`,
+    });
+    console.log("Geradora excluída:", geradora);
+  };
 
   // Realizar busca quando o usuário pressionar Enter
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -225,6 +235,7 @@ const GeradorasPage = () => {
         isOpen={isNovaGeradoraModalOpen}
         onClose={() => setIsNovaGeradoraModalOpen(false)}
         onSave={handleSaveNewGeradora}
+        geradoras={geradoras}
       />
       
       <EditarGeradoraModal
@@ -232,6 +243,7 @@ const GeradorasPage = () => {
         onClose={() => setIsEditarGeradoraModalOpen(false)}
         geradora={geradoraSelecionada}
         onSave={handleUpdateGeradora}
+        onDelete={handleDeleteGeradora}
       />
       
       <GerenciarClientesModal

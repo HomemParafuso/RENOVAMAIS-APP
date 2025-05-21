@@ -18,9 +18,10 @@ interface NovaGeradoraModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (geradora: any) => void;
+  geradoras: { nome: string }[];
 }
 
-const NovaGeradoraModal = ({ isOpen, onClose, onSave }: NovaGeradoraModalProps) => {
+const NovaGeradoraModal = ({ isOpen, onClose, onSave, geradoras }: NovaGeradoraModalProps) => {
   const [nome, setNome] = useState("");
   const [potencia, setPotencia] = useState("");
   const [localizacao, setLocalizacao] = useState("");
@@ -34,6 +35,16 @@ const NovaGeradoraModal = ({ isOpen, onClose, onSave }: NovaGeradoraModalProps) 
       toast({
         title: "Dados incompletos",
         description: "Por favor, preencha todos os campos obrigatórios.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Verificar se o nome já existe
+    if (geradoras.some(geradora => geradora.nome.toLowerCase() === nome.toLowerCase())) {
+      toast({
+        title: "Nome já existe",
+        description: "Já existe uma geradora com este nome. Por favor, escolha um nome diferente.",
         variant: "destructive"
       });
       return;
