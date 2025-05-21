@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Search, RefreshCw, MoreVertical, Eye, Edit, Bell, Download, QrCode, Share2 } from "lucide-react";
+import { Search, MoreVertical, Eye, Edit, Bell, Download, QrCode, Share2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import NovaFaturaModal from "@/components/fatura/NovaFaturaModal";
 import DetalheFaturaModal from "@/components/fatura/DetalheFaturaModal";
@@ -124,10 +123,6 @@ const FaturasPage = () => {
             <SelectItem value="pablio">Pablio Tacyanno</SelectItem>
           </SelectContent>
         </Select>
-        <Button variant="outline" className="flex items-center gap-2">
-          <RefreshCw className="h-4 w-4" />
-          Atualizar
-        </Button>
       </div>
 
       <div className="bg-white rounded-md border">

@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,7 +9,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { Download, FileText } from "lucide-react";
+import { FileText, QrCode, Copy, Check } from "lucide-react";
 
 interface Fatura {
   id: number;
@@ -30,18 +30,25 @@ const DetalheFaturaModal = ({
   fatura?: Fatura;
 }) => {
   const { toast } = useToast();
+  const [codigoPix, setCodigoPix] = useState("");
+  const [copied, setCopied] = useState(false);
 
-  const handleDownload = () => {
-    toast({
-      title: "Download iniciado",
-      description: "O download da fatura foi iniciado.",
-    });
-  };
+  useEffect(() => {
+    if (fatura) {
+      // Gerar um código PIX aleatório baseado na fatura
+      const codePix = `00020126580014BR.GOV.BCB.PIX01369${fatura.id}${Date.now().toString().substring(0, 4)}@${Math.random().toString(36).substring(2, 7)}5204000053039865802BR5924RENOVA MAIS ENERGIA LTDA6009SAO PAULO62090505${fatura.id}${Math.random().toString(36).substring(2, 6)}6304${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
+      setCodigoPix(codePix);
+    }
+  }, [fatura]);
 
-  const handleDownloadResumo = () => {
-    toast({
-      title: "Download do resumo iniciado",
-      description: "O download do resumo de cálculo foi iniciado.",
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(codigoPix).then(() => {
+      setCopied(true);
+      toast({
+        title: "Código copiado",
+        description: "O código foi copiado para a área de transferência."
+      });
+      setTimeout(() => setCopied(false), 2000);
     });
   };
 
@@ -110,24 +117,28 @@ const DetalheFaturaModal = ({
                   </div>
                 </div>
                 
-                <div className="mt-4 p-3 border border-gray-200 rounded-md bg-white flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className="bg-gray-100 p-2 rounded-md mr-3">
-                      <FileText className="h-5 w-5 text-gray-600" />
+                <div className="mt-4">
+                  <p className="text-sm font-medium text-gray-700 mb-2">QR Code para Pagamento</p>
+                  <div className="flex flex-col items-center space-y-4 p-4 bg-white rounded-lg border border-gray-200">
+                    <div className="w-48 h-48 flex items-center justify-center bg-gray-50 border border-gray-200 rounded-lg">
+                      <QrCode className="w-32 h-32 text-gray-800" />
                     </div>
-                    <div>
-                      <p className="text-sm font-medium">QR Code e Resumo</p>
-                      <p className="text-xs text-gray-500">Compartilhe o pagamento facilmente</p>
+                    
+                    <div className="w-full">
+                      <p className="text-xs text-gray-500 mb-1">Código PIX Copia e Cola</p>
+                      <div className="flex bg-gray-50 border border-gray-200 rounded-md">
+                        <div className="flex-grow p-2 text-xs font-mono overflow-x-auto whitespace-nowrap">
+                          {codigoPix}
+                        </div>
+                        <button 
+                          onClick={copyToClipboard} 
+                          className="p-2 bg-gray-100 border-l border-gray-200 hover:bg-gray-200"
+                        >
+                          {copied ? <Check size={16} className="text-green-600" /> : <Copy size={16} />}
+                        </button>
+                      </div>
                     </div>
                   </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={handleDownloadResumo}
-                  >
-                    <Download className="h-4 w-4 mr-1" />
-                    Baixar
-                  </Button>
                 </div>
               </div>
             </>
@@ -140,10 +151,6 @@ const DetalheFaturaModal = ({
           <DialogClose asChild>
             <Button variant="outline">Fechar</Button>
           </DialogClose>
-          <Button onClick={handleDownload} className="bg-green-600 hover:bg-green-700">
-            <Download className="h-4 w-4 mr-2" />
-            Download da Fatura
-          </Button>
         </div>
       </DialogContent>
     </Dialog>
