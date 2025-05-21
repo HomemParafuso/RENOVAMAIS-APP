@@ -61,7 +61,6 @@ const QrCodeFaturaModal = ({
           <div className="flex flex-col items-center text-center space-y-4">
             <div className="border border-gray-200 p-4 rounded-lg bg-white">
               <div className="w-48 h-48 flex items-center justify-center bg-gray-50">
-                {/* Aqui seria o QR Code real - usando um placeholder */}
                 <QrCodeIcon className="w-32 h-32 text-gray-800" />
               </div>
             </div>
@@ -75,12 +74,12 @@ const QrCodeFaturaModal = ({
             <div className="w-full">
               <p className="text-xs text-gray-500 mb-1">Código para Compartilhamento</p>
               <div className="flex bg-gray-50 border border-gray-200 rounded-md">
-                <div className="flex-grow p-2 text-sm font-mono overflow-x-auto whitespace-nowrap">
+                <div className="flex-grow p-2 text-sm font-mono overflow-auto whitespace-normal break-all max-h-20">
                   {codigoChave}
                 </div>
                 <button 
                   onClick={copyToClipboard} 
-                  className="p-2 bg-gray-100 border-l border-gray-200 hover:bg-gray-200"
+                  className="p-2 bg-gray-100 border-l border-gray-200 hover:bg-gray-200 flex-shrink-0"
                 >
                   {copied ? <Check size={16} className="text-green-600" /> : <Copy size={16} />}
                 </button>

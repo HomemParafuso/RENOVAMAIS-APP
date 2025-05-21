@@ -54,7 +54,7 @@ const DetalheFaturaModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Detalhes da Fatura</DialogTitle>
         </DialogHeader>
@@ -127,12 +127,12 @@ const DetalheFaturaModal = ({
                     <div className="w-full">
                       <p className="text-xs text-gray-500 mb-1">Código PIX Copia e Cola</p>
                       <div className="flex bg-gray-50 border border-gray-200 rounded-md">
-                        <div className="flex-grow p-2 text-xs font-mono overflow-x-auto whitespace-nowrap">
+                        <div className="flex-grow p-2 text-xs font-mono overflow-auto whitespace-normal break-all max-h-20">
                           {codigoPix}
                         </div>
                         <button 
                           onClick={copyToClipboard} 
-                          className="p-2 bg-gray-100 border-l border-gray-200 hover:bg-gray-200"
+                          className="p-2 bg-gray-100 border-l border-gray-200 hover:bg-gray-200 flex-shrink-0"
                         >
                           {copied ? <Check size={16} className="text-green-600" /> : <Copy size={16} />}
                         </button>
