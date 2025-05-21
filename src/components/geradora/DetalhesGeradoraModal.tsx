@@ -20,6 +20,7 @@ import Point from 'ol/geom/Point';
 import { Vector as VectorLayer } from 'ol/layer';
 import { Vector as VectorSource } from 'ol/source';
 import { Style, Icon } from 'ol/style';
+import { defaults as defaultControls } from 'ol/control';
 
 interface Geradora {
   id: number;
@@ -47,9 +48,9 @@ const DetalhesGeradoraModal = ({
   useEffect(() => {
     if (!geradora || !isOpen || !mapRef.current) return;
     
-    // Default coordinates if none provided
-    const lat = geradora.latitude || -23.550520;
-    const lng = geradora.longitude || -46.633308;
+    // Default coordinates if none provided - usando coordenadas para o Brasil se não houver específicas
+    const lat = geradora.latitude || -8.287221;
+    const lng = geradora.longitude || -35.971575;
     
     // Convert to OpenLayers projection
     const position = fromLonLat([lng, lat]);
@@ -73,18 +74,27 @@ const DetalhesGeradoraModal = ({
       })
     });
     
-    // Initialize map
+    // Initialize map with OSM layer similar to the reference image
     const map = new Map({
       target: mapRef.current,
       layers: [
         new TileLayer({
-          source: new OSM()
+          source: new OSM({
+            attributions: ['© Colaboradores do OpenStreetMap'],
+          })
         }),
         vectorLayer
       ],
       view: new View({
         center: position,
-        zoom: 13
+        zoom: 14,
+        minZoom: 2,
+        maxZoom: 19
+      }),
+      controls: defaultControls({
+        zoom: true,
+        attribution: true,
+        rotate: false
       })
     });
     
@@ -141,7 +151,7 @@ const DetalhesGeradoraModal = ({
             
             <div>
               <p className="text-sm font-medium text-gray-500 mb-2">Localização no Mapa</p>
-              <div className="h-[200px] bg-gray-100 rounded-lg" ref={mapRef}>
+              <div className="h-[300px] bg-gray-100 rounded-lg relative" ref={mapRef}>
                 {!mapInstanceRef.current && (
                   <div className="h-full flex items-center justify-center">
                     <div className="flex flex-col items-center">
@@ -152,6 +162,9 @@ const DetalhesGeradoraModal = ({
                     </div>
                   </div>
                 )}
+                <div className="absolute bottom-1 right-1 text-xs text-gray-600">
+                  © Colaboradores do OpenStreetMap
+                </div>
               </div>
             </div>
           </div>
