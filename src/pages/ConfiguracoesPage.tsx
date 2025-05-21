@@ -182,6 +182,14 @@ const ConfiguracoesPage = () => {
                   className="min-h-[100px]"
                 />
               </div>
+              <div>
+                <Label htmlFor="templateAtraso">Template para Lembrete de Atraso</Label>
+                <Textarea 
+                  id="templateAtraso" 
+                  placeholder="Olá {nome}, sua fatura no valor de {valor} está atrasada há {dias} dias..."
+                  className="min-h-[100px]"
+                />
+              </div>
 
               <div className="flex justify-end">
                 <Button className="bg-green-600 hover:bg-green-700" onClick={handleSaveNotificacoes}>

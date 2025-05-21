@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogClose,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -24,17 +25,21 @@ interface Geradora {
   apiKey?: string;
 }
 
+interface EditarGeradoraModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  geradora?: Geradora;
+  isViewOnly?: boolean;
+  onSave?: (geradora: Geradora) => void;
+}
+
 const EditarGeradoraModal = ({ 
   isOpen, 
   onClose, 
   geradora,
-  isViewOnly = false
-}: { 
-  isOpen: boolean; 
-  onClose: () => void;
-  geradora?: Geradora;
-  isViewOnly?: boolean;
-}) => {
+  isViewOnly = false,
+  onSave
+}: EditarGeradoraModalProps) => {
   const [nome, setNome] = useState("");
   const [potencia, setPotencia] = useState("");
   const [localizacao, setLocalizacao] = useState("");
@@ -64,6 +69,20 @@ const EditarGeradoraModal = ({
       return;
     }
 
+    if (geradora && onSave) {
+      const geradoraAtualizada = {
+        ...geradora,
+        nome,
+        potencia,
+        localizacao,
+        status,
+        marcaInversor,
+        apiKey
+      };
+      
+      onSave(geradoraAtualizada);
+    }
+
     toast({
       title: "Geradora atualizada",
       description: "As informações da geradora foram atualizadas com sucesso!",
@@ -76,6 +95,9 @@ const EditarGeradoraModal = ({
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>{isViewOnly ? "Detalhes da Geradora" : "Editar Geradora"}</DialogTitle>
+          <DialogDescription>
+            {isViewOnly ? "Visualize os detalhes da geradora" : "Edite as informações da unidade geradora"}
+          </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4 mt-4">

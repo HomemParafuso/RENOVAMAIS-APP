@@ -8,12 +8,19 @@ import {
   DialogHeader,
   DialogTitle,
   DialogClose,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 
-const NovaGeradoraModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
+interface NovaGeradoraModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (geradora: any) => void;
+}
+
+const NovaGeradoraModal = ({ isOpen, onClose, onSave }: NovaGeradoraModalProps) => {
   const [nome, setNome] = useState("");
   const [potencia, setPotencia] = useState("");
   const [localizacao, setLocalizacao] = useState("");
@@ -32,6 +39,21 @@ const NovaGeradoraModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () =
       return;
     }
 
+    // Criar objeto da nova geradora
+    const novaGeradora = {
+      id: Date.now(), // ID temporário baseado em timestamp
+      nome,
+      potencia,
+      localizacao,
+      status,
+      clientesVinculados: 0,
+      marcaInversor,
+      apiKey
+    };
+
+    // Chamar a função de callback para salvar
+    onSave(novaGeradora);
+    
     toast({
       title: "Geradora cadastrada",
       description: "A geradora foi cadastrada com sucesso!",
@@ -53,6 +75,7 @@ const NovaGeradoraModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () =
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Nova Geradora</DialogTitle>
+          <DialogDescription>Preencha os dados da nova unidade geradora</DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4 mt-4">

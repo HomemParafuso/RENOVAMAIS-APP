@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -32,9 +33,7 @@ const GeradorasPage = () => {
   const [isEditarGeradoraModalOpen, setIsEditarGeradoraModalOpen] = useState(false);
   const [isGerenciarClientesModalOpen, setIsGerenciarClientesModalOpen] = useState(false);
   const [geradoraSelecionada, setGeradoraSelecionada] = useState<Geradora | undefined>(undefined);
-  const { toast } = useToast();
-
-  const geradoras: Geradora[] = [
+  const [geradoras, setGeradoras] = useState<Geradora[]>([
     {
       id: 1,
       nome: "Usina Solar São Paulo I",
@@ -45,7 +44,24 @@ const GeradorasPage = () => {
       marcaInversor: "fronius",
       apiKey: "api123456"
     }
-  ];
+  ]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("todos");
+  const { toast } = useToast();
+
+  // Filtragem de geradoras
+  const geradorasFiltradas = geradoras.filter(geradora => {
+    // Filtro de busca por nome ou localização
+    const matchesSearch = searchTerm === "" || 
+      geradora.nome.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      geradora.localizacao.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // Filtro de status
+    const matchesStatus = statusFilter === "todos" || 
+      geradora.status.toLowerCase() === statusFilter.toLowerCase();
+    
+    return matchesSearch && matchesStatus;
+  });
 
   const handleVerDetalhes = (geradora: Geradora) => {
     setGeradoraSelecionada(geradora);
@@ -64,6 +80,30 @@ const GeradorasPage = () => {
 
   const handleNovaGeradora = () => {
     setIsNovaGeradoraModalOpen(true);
+  };
+
+  // Adicionar nova geradora
+  const handleSaveNewGeradora = (novaGeradora: Geradora) => {
+    setGeradoras(geradoras => [...geradoras, novaGeradora]);
+    console.log("Nova geradora adicionada:", novaGeradora);
+  };
+
+  // Atualizar geradora existente
+  const handleUpdateGeradora = (geradoraAtualizada: Geradora) => {
+    setGeradoras(geradoras => 
+      geradoras.map(g => 
+        g.id === geradoraAtualizada.id ? geradoraAtualizada : g
+      )
+    );
+    console.log("Geradora atualizada:", geradoraAtualizada);
+  };
+
+  // Realizar busca quando o usuário pressionar Enter
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      // A busca já acontece automaticamente pelo filtro
+      console.log("Buscando por:", searchTerm);
+    }
   };
 
   return (
@@ -88,9 +128,22 @@ const GeradorasPage = () => {
           <Input
             placeholder="Buscar por nome ou localização"
             className="pl-10"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
           />
         </div>
-        <Select defaultValue="todos">
+        <Button 
+          variant="outline" 
+          onClick={() => setSearchTerm("")}
+          className="hidden sm:flex"
+        >
+          Limpar
+        </Button>
+        <Select 
+          value={statusFilter} 
+          onValueChange={setStatusFilter}
+        >
           <SelectTrigger className="w-[200px]">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
@@ -113,47 +166,53 @@ const GeradorasPage = () => {
           <div className="text-right">Ações</div>
         </div>
         
-        {geradoras.map((geradora) => (
-          <div key={geradora.id} className="grid grid-cols-6 px-6 py-4 border-b last:border-0 items-center">
-            <div className="flex items-center">
-              <div className="h-8 w-8 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center font-medium mr-3">
-                <Zap className="h-4 w-4" />
+        {geradorasFiltradas.length > 0 ? (
+          geradorasFiltradas.map((geradora) => (
+            <div key={geradora.id} className="grid grid-cols-6 px-6 py-4 border-b last:border-0 items-center">
+              <div className="flex items-center">
+                <div className="h-8 w-8 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center font-medium mr-3">
+                  <Zap className="h-4 w-4" />
+                </div>
+                <span className="font-medium">{geradora.nome}</span>
               </div>
-              <span className="font-medium">{geradora.nome}</span>
+              <div>{geradora.potencia}</div>
+              <div>{geradora.localizacao}</div>
+              <div>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  {geradora.status}
+                </span>
+              </div>
+              <div>{geradora.clientesVinculados}</div>
+              <div className="text-right">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <MoreVertical className="h-5 w-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleVerDetalhes(geradora)}>
+                      <Eye className="h-4 w-4 mr-2" />
+                      Ver Detalhes
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleEditar(geradora)}>
+                      <Edit className="h-4 w-4 mr-2" />
+                      Editar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleGerenciarClientes(geradora)}>
+                      <Users className="h-4 w-4 mr-2" />
+                      Gerenciar Clientes
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
-            <div>{geradora.potencia}</div>
-            <div>{geradora.localizacao}</div>
-            <div>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                {geradora.status}
-              </span>
-            </div>
-            <div>{geradora.clientesVinculados}</div>
-            <div className="text-right">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <MoreVertical className="h-5 w-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => handleVerDetalhes(geradora)}>
-                    <Eye className="h-4 w-4 mr-2" />
-                    Ver Detalhes
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleEditar(geradora)}>
-                    <Edit className="h-4 w-4 mr-2" />
-                    Editar
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleGerenciarClientes(geradora)}>
-                    <Users className="h-4 w-4 mr-2" />
-                    Gerenciar Clientes
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+          ))
+        ) : (
+          <div className="px-6 py-8 text-center text-gray-500">
+            Nenhuma geradora encontrada com os filtros selecionados
           </div>
-        ))}
+        )}
       </div>
 
       <DetalhesGeradoraModal
@@ -165,12 +224,14 @@ const GeradorasPage = () => {
       <NovaGeradoraModal
         isOpen={isNovaGeradoraModalOpen}
         onClose={() => setIsNovaGeradoraModalOpen(false)}
+        onSave={handleSaveNewGeradora}
       />
       
       <EditarGeradoraModal
         isOpen={isEditarGeradoraModalOpen}
         onClose={() => setIsEditarGeradoraModalOpen(false)}
         geradora={geradoraSelecionada}
+        onSave={handleUpdateGeradora}
       />
       
       <GerenciarClientesModal
