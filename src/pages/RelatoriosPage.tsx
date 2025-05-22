@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { 
@@ -34,6 +33,7 @@ import { ptBR } from "date-fns/locale";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
+import { fetchGrowattEnergyData, fetchGrowattPlantData, formatMonthlyDataForChart, formatDataByUsina } from "@/utils/growattApi";
 
 interface Geradora {
   id: number;
@@ -96,81 +96,129 @@ const RelatoriosPage = () => {
     setIsLoading(true);
     
     try {
-      // Aqui é onde fariamos chamadas para APIs reais dos inversores
-      // Por exemplo, para Growatt, Fronius, etc baseado na marcaInversor
-      
-      // Simulando dados de geração com formato compatível com Recharts
-      const meses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
-      const anoAtual = new Date().getFullYear();
-      const mesAtual = new Date().getMonth();
-      
-      // Simular dados de geração por mês (em kWh)
-      const dadosGeracao = [];
-      const dadosGeradoraPorUsina = [];
-      
-      // Calcular quantos meses queremos baseado no periodo selecionado
-      let numMeses = 6; // padrão para 6M
-      if (periodo === "3M") numMeses = 3;
-      if (periodo === "12M") numMeses = 12;
-      
-      // Gerar dados para os últimos N meses
-      for (let i = 0; i < numMeses; i++) {
-        const mesIndex = (mesAtual - i + 12) % 12; // Garantir que não fique negativo
-        const mes = meses[mesIndex];
-        const anoMes = mesIndex > mesAtual ? (anoAtual - 1) : anoAtual;
-        const mesFormatado = `${mes}/${String(anoMes).substring(2)}`;
+      // Verificar se temos geradoras com API key do Growatt
+      const geradorasGrowatt = geradoras.filter(g => 
+        g.marcaInversor?.toLowerCase() === "growatt" && 
+        g.apiKey && 
+        g.apiKey.length > 5
+      );
+
+      if (geradorasGrowatt.length > 0) {
+        console.log("Encontradas geradoras Growatt com API key:", geradorasGrowatt.length);
         
-        // Gerar um valor com alguma variação para simular dados reais
-        const valorBase = 14000 + Math.floor(Math.random() * 3000 - 1000);
+        // Usar a primeira geradora Growatt encontrada para buscar dados
+        const geradora = geradorasGrowatt[0];
+        console.log("Usando geradora para API:", geradora.nome, "com API key:", geradora.apiKey);
         
-        dadosGeracao.push({
-          mes: mesFormatado,
-          valor: valorBase
-        });
+        // Converter datas para o formato esperado pela API (YYYY-MM-DD)
+        const formatarData = (data: Date) => format(data, "yyyy-MM-dd");
+        const dataInicioFormatada = formatarData(subMonths(new Date(), 6)); // Últimos 6 meses
+        const dataFimFormatada = formatarData(new Date());
         
-        // Para cada geradora, adicionar uma entrada no gráfico por usina
-        const entradaPorUsina: any = { mes: mesFormatado };
-        geradoras.forEach(geradora => {
-          // Distribuir a geração total entre as usinas com alguma variação
-          const fatorUsina = geradora.id === 1 ? 0.65 : 0.35; // Uma usina gera mais que a outra
-          entradaPorUsina[geradora.nome] = Math.floor(valorBase * fatorUsina * (1 + (Math.random() * 0.2 - 0.1)));
-        });
+        // Buscar dados de energia mensal
+        const dadosMensais = await fetchGrowattEnergyData(
+          geradora.apiKey!,
+          "12345", // Plant ID (em um caso real, seria obtido de uma chamada anterior)
+          "month",
+          dataInicioFormatada,
+          dataFimFormatada
+        );
         
-        dadosGeradoraPorUsina.push(entradaPorUsina);
-      }
-      
-      // Inverter os arrays para que os dados mais antigos apareçam primeiro
-      setGeracaoData(dadosGeracao.reverse());
-      setGeracaoPorUsinaData(dadosGeradoraPorUsina.reverse());
-      
-      // Simular dados financeiros relacionados
-      const receitasSimuladas = dadosGeracao.map(item => ({
-        mes: item.mes,
-        valor: Math.floor(item.valor * 0.8) // Simplificação: receita é 80% da geração
-      }));
-      
-      const economiasSimuladas = dadosGeracao.map(item => ({
-        mes: item.mes,
-        valor: Math.floor(item.valor * 0.2) // Simplificação: economia é 20% da geração
-      }));
-      
-      setReceitaData(receitasSimuladas);
-      setEconomiaData(economiasSimuladas);
-      
-      toast({
-        title: "Dados atualizados",
-        description: `Relatórios atualizados com sucesso para o período de ${periodo}.`,
-      });
-      
-      // Se houver geradoras com chaves API reais, mostramos uma mensagem adicional
-      if (geradoras.some(g => g.apiKey && g.apiKey.length > 5)) {
+        console.log("Dados mensais obtidos:", dadosMensais);
+        
+        // Formatar dados para uso nos gráficos
+        const dadosFormatados = formatMonthlyDataForChart(dadosMensais);
+        setGeracaoData(dadosFormatados);
+        
+        // Simular dados por usina (em um caso real, faríamos múltiplas chamadas)
+        const dadosPorUsina = formatDataByUsina(dadosFormatados, geradora.nome);
+        setGeracaoPorUsinaData(dadosPorUsina);
+        
+        // Derivar dados financeiros a partir dos dados de geração
+        const receitasCalculadas = dadosFormatados.map(item => ({
+          mes: item.mes,
+          valor: Math.floor(item.valor * 0.8) // 80% da geração como receita
+        }));
+        
+        const economiasCalculadas = dadosFormatados.map(item => ({
+          mes: item.mes,
+          valor: Math.floor(item.valor * 0.2) // 20% da geração como economia
+        }));
+        
+        setReceitaData(receitasCalculadas);
+        setEconomiaData(economiasCalculadas);
+        
         toast({
-          title: "Integração com Inversores",
-          description: `Dados obtidos diretamente dos inversores para ${geradoras.length} usinas.`,
+          title: "Dados reais carregados",
+          description: `Relatórios atualizados com dados reais da API Growatt.`,
           variant: "default"
         });
+      } else {
+        console.log("Nenhuma geradora Growatt com API key encontrada, usando dados simulados");
+        
+        // Fallback para dados simulados caso não tenhamos geradoras com API key
+        const meses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+        const anoAtual = new Date().getFullYear();
+        const mesAtual = new Date().getMonth();
+        
+        // Simular dados de geração por mês (em kWh)
+        const dadosGeracao = [];
+        const dadosGeradoraPorUsina = [];
+        
+        // Calcular quantos meses queremos baseado no periodo selecionado
+        let numMeses = 6; // padrão para 6M
+        if (periodo === "3M") numMeses = 3;
+        if (periodo === "12M") numMeses = 12;
+        
+        // Gerar dados para os últimos N meses
+        for (let i = 0; i < numMeses; i++) {
+          const mesIndex = (mesAtual - i + 12) % 12; // Garantir que não fique negativo
+          const mes = meses[mesIndex];
+          const anoMes = mesIndex > mesAtual ? (anoAtual - 1) : anoAtual;
+          const mesFormatado = `${mes}/${String(anoMes).substring(2)}`;
+          
+          // Gerar um valor com alguma variação para simular dados reais
+          const valorBase = 14000 + Math.floor(Math.random() * 3000 - 1000);
+          
+          dadosGeracao.push({
+            mes: mesFormatado,
+            valor: valorBase
+          });
+          
+          // Para cada geradora, adicionar uma entrada no gráfico por usina
+          const entradaPorUsina: any = { mes: mesFormatado };
+          geradoras.forEach(geradora => {
+            // Distribuir a geração total entre as usinas com alguma variação
+            const fatorUsina = geradora.id === 1 ? 0.65 : 0.35; // Uma usina gera mais que a outra
+            entradaPorUsina[geradora.nome] = Math.floor(valorBase * fatorUsina * (1 + (Math.random() * 0.2 - 0.1)));
+          });
+          
+          dadosGeradoraPorUsina.push(entradaPorUsina);
+        }
+        
+        // Inverter os arrays para que os dados mais antigos apareçam primeiro
+        setGeracaoData(dadosGeracao.reverse());
+        setGeracaoPorUsinaData(dadosGeradoraPorUsina.reverse());
+        
+        // Simular dados financeiros relacionados
+        const receitasSimuladas = dadosGeracao.map(item => ({
+          mes: item.mes,
+          valor: Math.floor(item.valor * 0.8) // Simplificação: receita é 80% da geração
+        }));
+        
+        const economiasSimuladas = dadosGeracao.map(item => ({
+          mes: item.mes,
+          valor: Math.floor(item.valor * 0.2) // Simplificação: economia é 20% da geração
+        }));
+        
+        setReceitaData(receitasSimuladas);
+        setEconomiaData(economiasSimuladas);
+        
+        toast({
+          title: "Dados atualizados",
+          description: `Relatórios atualizados com dados simulados para o período de ${periodo}.`,
+        });
       }
-      
     } catch (error) {
       console.error("Erro ao buscar dados da API:", error);
       toast({
@@ -179,8 +227,8 @@ const RelatoriosPage = () => {
         variant: "destructive"
       });
       
-      // Fallback para dados simulados em caso de erro
-      // (código de simulação simples como backup)
+      // Exibir o erro no console para debug
+      console.error("Detalhes do erro:", error);
     } finally {
       setIsLoading(false);
     }

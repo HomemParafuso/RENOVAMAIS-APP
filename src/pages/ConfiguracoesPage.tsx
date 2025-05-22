@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,9 +20,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
+import { AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import PixConfigModal from "@/components/configuracoes/PixConfigModal";
 
 const ConfiguracoesPage = () => {
   const { toast } = useToast();
+  const [isPixConfigModalOpen, setIsPixConfigModalOpen] = useState(false);
 
   const handleSaveGeral = () => {
     toast({
@@ -43,6 +47,10 @@ const ConfiguracoesPage = () => {
       title: "Configurações de notificações salvas",
       description: "As configurações de notificações foram salvas com sucesso!",
     });
+  };
+
+  const handleOpenPixConfig = () => {
+    setIsPixConfigModalOpen(true);
   };
 
   return (
@@ -211,6 +219,13 @@ const ConfiguracoesPage = () => {
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between py-3 border-b">
                 <div>
+                  <h3 className="font-medium">Configurar PIX</h3>
+                  <p className="text-sm text-muted-foreground">Integração com sistema de pagamentos PIX</p>
+                </div>
+                <Button variant="outline" onClick={handleOpenPixConfig}>Configurar</Button>
+              </div>
+              <div className="flex items-center justify-between py-3 border-b">
+                <div>
                   <h3 className="font-medium">API de Pagamentos</h3>
                   <p className="text-sm text-muted-foreground">Integração para processamento de pagamentos</p>
                 </div>
@@ -234,6 +249,11 @@ const ConfiguracoesPage = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <PixConfigModal 
+        isOpen={isPixConfigModalOpen} 
+        onClose={() => setIsPixConfigModalOpen(false)} 
+      />
     </div>
   );
 };
