@@ -33,21 +33,53 @@ const GeradorasPage = () => {
   const [isEditarGeradoraModalOpen, setIsEditarGeradoraModalOpen] = useState(false);
   const [isGerenciarClientesModalOpen, setIsGerenciarClientesModalOpen] = useState(false);
   const [geradoraSelecionada, setGeradoraSelecionada] = useState<Geradora | undefined>(undefined);
-  const [geradoras, setGeradoras] = useState<Geradora[]>([
-    {
-      id: 1,
-      nome: "Usina Solar São Paulo I",
-      potencia: "500 kWp",
-      localizacao: "São Paulo, SP",
-      status: "Ativo",
-      clientesVinculados: 25,
-      marcaInversor: "fronius",
-      apiKey: "api123456"
-    }
-  ]);
+  const [geradoras, setGeradoras] = useState<Geradora[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
   const { toast } = useToast();
+
+  // Carregar geradoras do localStorage ao iniciar
+  useEffect(() => {
+    const geradorasSalvas = localStorage.getItem('geradoras');
+    if (geradorasSalvas) {
+      try {
+        setGeradoras(JSON.parse(geradorasSalvas));
+      } catch (error) {
+        console.error("Erro ao carregar geradoras:", error);
+        // Inicializar com dado padrão se houver erro
+        setGeradoras([{
+          id: 1,
+          nome: "Usina Solar São Paulo I",
+          potencia: "500 kWp",
+          localizacao: "São Paulo, SP",
+          status: "Ativo",
+          clientesVinculados: 25,
+          marcaInversor: "fronius",
+          apiKey: "api123456"
+        }]);
+      }
+    } else {
+      // Inicializar com dado padrão se não houver nada salvo
+      setGeradoras([{
+        id: 1,
+        nome: "Usina Solar São Paulo I",
+        potencia: "500 kWp",
+        localizacao: "São Paulo, SP",
+        status: "Ativo",
+        clientesVinculados: 25,
+        marcaInversor: "fronius",
+        apiKey: "api123456"
+      }]);
+    }
+  }, []);
+
+  // Salvar geradoras no localStorage sempre que houver mudanças
+  useEffect(() => {
+    if (geradoras.length > 0) {
+      localStorage.setItem('geradoras', JSON.stringify(geradoras));
+      console.log("Geradoras salvas no localStorage:", geradoras);
+    }
+  }, [geradoras]);
 
   // Filtragem de geradoras
   const geradorasFiltradas = geradoras.filter(geradora => {
@@ -69,7 +101,8 @@ const GeradorasPage = () => {
   };
 
   const handleEditar = (geradora: Geradora) => {
-    setGeradoraSelecionada(geradora);
+    console.log("Editando geradora:", geradora);
+    setGeradoraSelecionada({...geradora});
     setIsEditarGeradoraModalOpen(true);
   };
 
@@ -90,11 +123,19 @@ const GeradorasPage = () => {
 
   // Atualizar geradora existente
   const handleUpdateGeradora = (geradoraAtualizada: Geradora) => {
+    console.log("Atualizando geradora:", geradoraAtualizada);
+    
     setGeradoras(geradoras => 
       geradoras.map(g => 
         g.id === geradoraAtualizada.id ? geradoraAtualizada : g
       )
     );
+    
+    toast({
+      title: "Geradora atualizada",
+      description: `As alterações na geradora ${geradoraAtualizada.nome} foram salvas com sucesso.`,
+    });
+    
     console.log("Geradora atualizada:", geradoraAtualizada);
   };
   

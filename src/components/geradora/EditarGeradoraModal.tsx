@@ -63,6 +63,7 @@ const EditarGeradoraModal = ({
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const { toast } = useToast();
 
+  // Reset form fields when geradora changes or modal opens
   useEffect(() => {
     if (geradora) {
       setNome(geradora.nome);
@@ -72,7 +73,7 @@ const EditarGeradoraModal = ({
       setMarcaInversor(geradora.marcaInversor || "");
       setApiKey(geradora.apiKey || "");
     }
-  }, [geradora]);
+  }, [geradora, isOpen]); // Added isOpen to the dependency array to ensure reset on modal open
 
   const handleSalvar = () => {
     if (!nome || !potencia || !localizacao) {
@@ -95,14 +96,15 @@ const EditarGeradoraModal = ({
         apiKey
       };
       
+      console.log("Salvando geradora atualizada:", geradoraAtualizada);
       onSave(geradoraAtualizada);
+      
+      toast({
+        title: "Geradora atualizada",
+        description: "As informações da geradora foram atualizadas com sucesso!",
+      });
+      onClose();
     }
-
-    toast({
-      title: "Geradora atualizada",
-      description: "As informações da geradora foram atualizadas com sucesso!",
-    });
-    onClose();
   };
 
   const handleDelete = () => {
