@@ -1,12 +1,25 @@
+
 import React from "react";
-import { BarChart3, Users, FileText, AlertTriangle, FileUp } from "lucide-react";
+import { BarChart3, Users, FileText, AlertTriangle, FileUp, ChevronRight } from "lucide-react";
 import { PieChart, Pie, ResponsiveContainer, Cell, BarChart, Bar, XAxis, CartesianGrid, Tooltip } from 'recharts';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "@/hooks/use-toast";
 import NovaFaturaModal from "@/components/fatura/NovaFaturaModal";
 
-const StatCard = ({ title, value, icon: Icon, description, iconBgColor, iconColor = "text-white", change, trend }: { 
+const StatCard = ({ 
+  title, 
+  value, 
+  icon: Icon, 
+  description, 
+  iconBgColor, 
+  iconColor = "text-white", 
+  change, 
+  trend,
+  onClick 
+}: { 
   title: string;
   value: string | number;
   icon: React.ElementType;
@@ -15,8 +28,9 @@ const StatCard = ({ title, value, icon: Icon, description, iconBgColor, iconColo
   iconColor?: string;
   change?: string;
   trend?: "up" | "down";
+  onClick?: () => void;
 }) => (
-  <Card>
+  <Card className={onClick ? "cursor-pointer hover:shadow-md transition-shadow" : ""} onClick={onClick}>
     <CardContent className="p-6">
       <div className="flex items-center justify-between">
         <div>
@@ -33,12 +47,20 @@ const StatCard = ({ title, value, icon: Icon, description, iconBgColor, iconColo
           <Icon className={`h-5 w-5 ${iconColor}`} />
         </div>
       </div>
+      {onClick && (
+        <div className="flex items-center justify-end mt-4 text-xs text-muted-foreground">
+          <span>Ver detalhes</span>
+          <ChevronRight className="h-3 w-3 ml-1" />
+        </div>
+      )}
     </CardContent>
   </Card>
 );
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [isNovaFaturaModalOpen, setIsNovaFaturaModalOpen] = useState(false);
+  const [activeTimeFrame, setActiveTimeFrame] = useState<"3M" | "6M" | "12M">("6M");
   
   // Dados para o gráfico de pizza
   const economyData = [
@@ -62,6 +84,56 @@ const Dashboard = () => {
   const topClientes = [
     { id: 1, nome: 'Pablio Tacyanno', economia: 'Percentual de Economia', valor: 'R$ 0,00', faturas: '0 faturas' }
   ];
+
+  const handleClientesClick = () => {
+    navigate("/clientes");
+    toast({
+      title: "Navegando para Clientes",
+      description: "Carregando lista de clientes ativos"
+    });
+  };
+
+  const handleFaturasPendentesClick = () => {
+    navigate("/faturas");
+    toast({
+      title: "Faturas Pendentes",
+      description: "Visualizando faturas que precisam de atenção"
+    });
+  };
+
+  const handleFaturasAtrasadasClick = () => {
+    navigate("/faturas");
+    toast({
+      title: "Faturas Atrasadas",
+      description: "Visualizando faturas em atraso"
+    });
+  };
+
+  const handleGeracaoTotalClick = () => {
+    navigate("/relatorios");
+    toast({
+      title: "Relatório de Geração",
+      description: "Visualizando detalhes de geração de energia"
+    });
+  };
+
+  const handleTimeFrameChange = (timeFrame: "3M" | "6M" | "12M") => {
+    setActiveTimeFrame(timeFrame);
+    toast({
+      title: `Período alterado para ${timeFrame}`,
+      description: "Atualizando dados do gráfico",
+      variant: "default"
+    });
+  };
+
+  const handleClienteClick = (cliente: any) => {
+    toast({
+      title: `Cliente: ${cliente.nome}`,
+      description: "Abrindo detalhes do cliente",
+      variant: "default"
+    });
+    navigate(`/clientes`);
+  };
 
   return (
     <div className="p-8">
@@ -87,6 +159,7 @@ const Dashboard = () => {
           description="de 1 clientes" 
           iconBgColor="bg-green-100" 
           iconColor="text-green-600" 
+          onClick={handleClientesClick}
         />
         <StatCard 
           title="Faturas Pendentes" 
@@ -95,6 +168,7 @@ const Dashboard = () => {
           description="de 1 faturas" 
           iconBgColor="bg-yellow-100" 
           iconColor="text-yellow-600" 
+          onClick={handleFaturasPendentesClick}
         />
         <StatCard 
           title="Faturas Atrasadas" 
@@ -103,6 +177,7 @@ const Dashboard = () => {
           description="necessitam atenção" 
           iconBgColor="bg-red-100" 
           iconColor="text-red-600" 
+          onClick={handleFaturasAtrasadasClick}
         />
         <StatCard 
           title="Geração Total" 
@@ -112,6 +187,7 @@ const Dashboard = () => {
           iconColor="text-blue-600" 
           change="12% este mês" 
           trend="up" 
+          onClick={handleGeracaoTotalClick}
         />
       </div>
 
@@ -121,9 +197,21 @@ const Dashboard = () => {
             <div className="flex items-center justify-between">
               <CardTitle>Receita Mensal</CardTitle>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm">3M</Button>
-                <Button variant="outline" size="sm">6M</Button>
-                <Button variant="outline" size="sm">12M</Button>
+                <Button 
+                  variant={activeTimeFrame === "3M" ? "default" : "outline"} 
+                  size="sm"
+                  onClick={() => handleTimeFrameChange("3M")}
+                >3M</Button>
+                <Button 
+                  variant={activeTimeFrame === "6M" ? "default" : "outline"} 
+                  size="sm"
+                  onClick={() => handleTimeFrameChange("6M")}
+                >6M</Button>
+                <Button 
+                  variant={activeTimeFrame === "12M" ? "default" : "outline"} 
+                  size="sm"
+                  onClick={() => handleTimeFrameChange("12M")}
+                >12M</Button>
               </div>
             </div>
           </CardHeader>
@@ -184,7 +272,11 @@ const Dashboard = () => {
           <CardContent>
             <div className="space-y-4">
               {topClientes.map((cliente) => (
-                <div key={cliente.id} className="flex items-center p-3 bg-gray-50 rounded-lg">
+                <div 
+                  key={cliente.id} 
+                  className="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
+                  onClick={() => handleClienteClick(cliente)}
+                >
                   <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-medium mr-3">
                     {cliente.id}
                   </div>
