@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
-import { Download, DollarSign, Users, BarChart2, Zap, Calendar, CalendarRange, Loader2 } from "lucide-react";
+import { Download, DollarSign, Users, BarChart2, Zap, Calendar, CalendarRange, Loader2, ArrowDown, ArrowUp } from "lucide-react";
 import { 
   LineChart, 
   Line, 
@@ -35,6 +35,24 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchGrowattEnergyData, fetchGrowattPlantData, formatMonthlyDataForChart, formatDataByUsina } from "@/utils/growattApi";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 interface Geradora {
   id: number;
@@ -45,6 +63,16 @@ interface Geradora {
   clientesVinculados: number;
   marcaInversor?: string;
   apiKey?: string;
+}
+
+interface Cliente {
+  id: number;
+  nome: string;
+  consumoMedio: number;
+  economiaGerada: number;
+  receitaTotal: number;
+  faturasPendentes: number;
+  dataAdesao: string;
 }
 
 const RelatoriosPage = () => {
@@ -64,6 +92,12 @@ const RelatoriosPage = () => {
   const [geracaoData, setGeracaoData] = useState([]);
   const [geracaoPorUsinaData, setGeracaoPorUsinaData] = useState([]);
   const [geradoras, setGeradoras] = useState<Geradora[]>([]);
+  
+  // Dados para a aba de clientes
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [sortConfig, setSortConfig] = useState<{key: keyof Cliente, direction: 'ascending' | 'descending'} | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const clientesPorPagina = 5;
 
   // Efeito para atualizar data de início quando o período mudar
   useEffect(() => {
@@ -114,7 +148,112 @@ const RelatoriosPage = () => {
     };
 
     carregarGeradoras();
+    carregarDadosClientes();
   }, []);
+
+  // Função para carregar dados dos clientes
+  const carregarDadosClientes = () => {
+    // Em um caso real, esses dados viriam de uma API
+    const clientesMock: Cliente[] = [
+      {
+        id: 1,
+        nome: "Pablio Tacyanno",
+        consumoMedio: 350,
+        economiaGerada: 1200,
+        receitaTotal: 5800,
+        faturasPendentes: 1,
+        dataAdesao: "10/12/2024"
+      },
+      {
+        id: 2,
+        nome: "Maria Empreendimentos",
+        consumoMedio: 620,
+        economiaGerada: 2100,
+        receitaTotal: 8900,
+        faturasPendentes: 0,
+        dataAdesao: "22/01/2025"
+      },
+      {
+        id: 3,
+        nome: "João Comércio Ltda",
+        consumoMedio: 480,
+        economiaGerada: 1800,
+        receitaTotal: 7200,
+        faturasPendentes: 2,
+        dataAdesao: "05/11/2024"
+      },
+      {
+        id: 4,
+        nome: "Supermercado Bom Preço",
+        consumoMedio: 950,
+        economiaGerada: 3200,
+        receitaTotal: 12500,
+        faturasPendentes: 0,
+        dataAdesao: "15/09/2024"
+      },
+      {
+        id: 5,
+        nome: "Clínica Saúde Plena",
+        consumoMedio: 320,
+        economiaGerada: 1100,
+        receitaTotal: 4800,
+        faturasPendentes: 0,
+        dataAdesao: "18/03/2025"
+      },
+      {
+        id: 6,
+        nome: "Academia Fitness Total",
+        consumoMedio: 580,
+        economiaGerada: 1950,
+        receitaTotal: 7600,
+        faturasPendentes: 1,
+        dataAdesao: "02/02/2025"
+      },
+      {
+        id: 7,
+        nome: "Restaurante Sabor Caseiro",
+        consumoMedio: 420,
+        economiaGerada: 1450,
+        receitaTotal: 6200,
+        faturasPendentes: 0,
+        dataAdesao: "28/10/2024"
+      }
+    ];
+    
+    setClientes(clientesMock);
+  };
+
+  // Função para ordenar clientes
+  const sortClientes = (key: keyof Cliente) => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    
+    setSortConfig({ key, direction });
+  };
+
+  // Obter os clientes ordenados
+  const getSortedClientes = () => {
+    if (!sortConfig) return clientes;
+    
+    return [...clientes].sort((a, b) => {
+      if (a[sortConfig.key] < b[sortConfig.key]) {
+        return sortConfig.direction === 'ascending' ? -1 : 1;
+      }
+      if (a[sortConfig.key] > b[sortConfig.key]) {
+        return sortConfig.direction === 'ascending' ? 1 : -1;
+      }
+      return 0;
+    });
+  };
+
+  // Calcular clientes para a página atual
+  const indexUltimoCliente = currentPage * clientesPorPagina;
+  const indexPrimeiroCliente = indexUltimoCliente - clientesPorPagina;
+  const clientesAtuais = getSortedClientes().slice(indexPrimeiroCliente, indexUltimoCliente);
+  const totalPaginas = Math.ceil(clientes.length / clientesPorPagina);
 
   // Função para buscar dados reais da API baseado nas geradoras cadastradas
   const buscarDadosReais = async () => {
@@ -482,15 +621,114 @@ const RelatoriosPage = () => {
           </div>
         </TabsContent>
         <TabsContent value="clientes">
-          <div className="p-6 mt-4 bg-white rounded-lg border">
-            <div className="flex items-center justify-center h-[300px] flex-col">
-              <BarChart2 className="h-12 w-12 text-gray-300 mb-4" />
-              <h3 className="text-lg font-medium text-gray-500 mb-2">Relatórios de Clientes</h3>
-              <p className="text-gray-400">Esta seção está em desenvolvimento.</p>
-              <Button className="mt-4 bg-green-600 hover:bg-green-700">
-                <Users className="h-4 w-4 mr-2" />
-                Cadastrar Clientes
-              </Button>
+          <div className="mt-4 bg-white rounded-lg border">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-medium">Desempenho de Clientes</h3>
+                <Button variant="outline" size="sm">
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportar
+                </Button>
+              </div>
+              
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableCaption>Lista de clientes cadastrados no sistema</TableCaption>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead onClick={() => sortClientes('nome')} className="cursor-pointer">
+                        Nome
+                        {sortConfig?.key === 'nome' && (
+                          sortConfig.direction === 'ascending' 
+                            ? <ArrowUp className="inline h-4 w-4 ml-1" /> 
+                            : <ArrowDown className="inline h-4 w-4 ml-1" />
+                        )}
+                      </TableHead>
+                      <TableHead onClick={() => sortClientes('consumoMedio')} className="cursor-pointer text-right">
+                        Consumo Médio (kWh)
+                        {sortConfig?.key === 'consumoMedio' && (
+                          sortConfig.direction === 'ascending' 
+                            ? <ArrowUp className="inline h-4 w-4 ml-1" /> 
+                            : <ArrowDown className="inline h-4 w-4 ml-1" />
+                        )}
+                      </TableHead>
+                      <TableHead onClick={() => sortClientes('economiaGerada')} className="cursor-pointer text-right">
+                        Economia Gerada (R$)
+                        {sortConfig?.key === 'economiaGerada' && (
+                          sortConfig.direction === 'ascending' 
+                            ? <ArrowUp className="inline h-4 w-4 ml-1" /> 
+                            : <ArrowDown className="inline h-4 w-4 ml-1" />
+                        )}
+                      </TableHead>
+                      <TableHead onClick={() => sortClientes('receitaTotal')} className="cursor-pointer text-right">
+                        Receita Total (R$)
+                        {sortConfig?.key === 'receitaTotal' && (
+                          sortConfig.direction === 'ascending' 
+                            ? <ArrowUp className="inline h-4 w-4 ml-1" /> 
+                            : <ArrowDown className="inline h-4 w-4 ml-1" />
+                        )}
+                      </TableHead>
+                      <TableHead onClick={() => sortClientes('faturasPendentes')} className="cursor-pointer text-right">
+                        Faturas Pendentes
+                        {sortConfig?.key === 'faturasPendentes' && (
+                          sortConfig.direction === 'ascending' 
+                            ? <ArrowUp className="inline h-4 w-4 ml-1" /> 
+                            : <ArrowDown className="inline h-4 w-4 ml-1" />
+                        )}
+                      </TableHead>
+                      <TableHead onClick={() => sortClientes('dataAdesao')} className="cursor-pointer">
+                        Data de Adesão
+                        {sortConfig?.key === 'dataAdesao' && (
+                          sortConfig.direction === 'ascending' 
+                            ? <ArrowUp className="inline h-4 w-4 ml-1" /> 
+                            : <ArrowDown className="inline h-4 w-4 ml-1" />
+                        )}
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {clientesAtuais.map((cliente) => (
+                      <TableRow key={cliente.id}>
+                        <TableCell className="font-medium">{cliente.nome}</TableCell>
+                        <TableCell className="text-right">{cliente.consumoMedio}</TableCell>
+                        <TableCell className="text-right">R$ {cliente.economiaGerada.toLocaleString()}</TableCell>
+                        <TableCell className="text-right">R$ {cliente.receitaTotal.toLocaleString()}</TableCell>
+                        <TableCell className="text-right">{cliente.faturasPendentes}</TableCell>
+                        <TableCell>{cliente.dataAdesao}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              
+              <Pagination className="mt-4">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious 
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                    />
+                  </PaginationItem>
+                  
+                  {Array.from({ length: totalPaginas }, (_, i) => i + 1).map((page) => (
+                    <PaginationItem key={page}>
+                      <PaginationLink 
+                        isActive={currentPage === page}
+                        onClick={() => setCurrentPage(page)}
+                      >
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  
+                  <PaginationItem>
+                    <PaginationNext 
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPaginas))}
+                      className={currentPage === totalPaginas ? "pointer-events-none opacity-50" : ""}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
             </div>
           </div>
         </TabsContent>

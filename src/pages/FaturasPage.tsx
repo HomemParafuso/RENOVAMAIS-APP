@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+
+import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -7,12 +8,34 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Search, MoreVertical, Eye, Edit, Bell, Download, QrCode, Share2 } from "lucide-react";
+import { Search, MoreVertical, Eye, Edit, Bell, Download, QrCode, Share2, Upload, FileText } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import NovaFaturaModal from "@/components/fatura/NovaFaturaModal";
 import DetalheFaturaModal from "@/components/fatura/DetalheFaturaModal";
 import QrCodeFaturaModal from "@/components/fatura/QrCodeFaturaModal";
 import { useToast } from "@/components/ui/use-toast";
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { 
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage
+} from "@/components/ui/form";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 interface Fatura {
   id: number;
@@ -22,13 +45,19 @@ interface Fatura {
   valor: string;
   status: string;
   notificado: boolean;
+  endereco?: string;
+  leituraAnterior?: number;
+  leituraAtual?: number;
 }
 
 const FaturasPage = () => {
   const [isNovaFaturaModalOpen, setIsNovaFaturaModalOpen] = useState(false);
   const [isDetalhesFaturaModalOpen, setIsDetalhesFaturaModalOpen] = useState(false);
   const [isQrCodeModalOpen, setIsQrCodeModalOpen] = useState(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [faturaAtual, setFaturaAtual] = useState<Fatura | undefined>(undefined);
+  const [faturaPreview, setFaturaPreview] = useState<Partial<Fatura> | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const faturas: Fatura[] = [
@@ -39,7 +68,10 @@ const FaturasPage = () => {
       vencimento: "10/05/2025",
       valor: "R$ 150,00",
       status: "Pendente",
-      notificado: false
+      notificado: false,
+      endereco: "Rua das Flores, 123 - Centro",
+      leituraAnterior: 1200,
+      leituraAtual: 1350
     }
   ];
 
@@ -81,6 +113,105 @@ const FaturasPage = () => {
       description: `A fatura de ${fatura.referencia} está pronta para ser compartilhada.`,
     });
   };
+  
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    // Em um sistema real, aqui faríamos o upload e processamento do arquivo
+    // Para simular, vamos criar uma prévia de fatura
+    
+    // Simular extração de dados do PDF
+    setTimeout(() => {
+      // Dados simulados que seriam extraídos do arquivo
+      const dadosExtraidos = {
+        cliente: "Pablio Tacyanno",
+        referencia: "06/2025",
+        vencimento: "15/06/2025",
+        endereco: "Rua das Flores, 123 - Centro",
+        leituraAnterior: 1350,
+        leituraAtual: 1480
+      };
+      
+      // Calcular valor baseado na leitura
+      const consumo = dadosExtraidos.leituraAtual - dadosExtraidos.leituraAnterior;
+      const valorKwh = 0.75; // R$ por kWh, em um sistema real viria da configuração do cliente
+      const valorCalculado = (consumo * valorKwh).toFixed(2);
+      
+      setFaturaPreview({
+        ...dadosExtraidos,
+        valor: `R$ ${valorCalculado}`,
+        status: "Pendente",
+      });
+      
+      setIsUploadModalOpen(true);
+    }, 1500);
+    
+    toast({
+      title: "Processando arquivo",
+      description: "Analisando dados da fatura...",
+    });
+  };
+  
+  // Schema para o formulário de confirmação
+  const faturaSchema = z.object({
+    cliente: z.string().min(1, "Cliente é obrigatório"),
+    referencia: z.string().min(1, "Referência é obrigatória"),
+    vencimento: z.string().min(1, "Data de vencimento é obrigatória"),
+    endereco: z.string().min(1, "Endereço é obrigatório"),
+    leituraAnterior: z.coerce.number().min(0, "Leitura anterior inválida"),
+    leituraAtual: z.coerce.number().min(0, "Leitura atual inválida")
+      .refine(val => val > (faturaPreview?.leituraAnterior || 0), {
+        message: "A leitura atual deve ser maior que a anterior",
+      }),
+    valor: z.string().min(1, "Valor é obrigatório"),
+  });
+  
+  const form = useForm<z.infer<typeof faturaSchema>>({
+    resolver: zodResolver(faturaSchema),
+    defaultValues: {
+      cliente: faturaPreview?.cliente || "",
+      referencia: faturaPreview?.referencia || "",
+      vencimento: faturaPreview?.vencimento || "",
+      endereco: faturaPreview?.endereco || "",
+      leituraAnterior: faturaPreview?.leituraAnterior || 0,
+      leituraAtual: faturaPreview?.leituraAtual || 0,
+      valor: faturaPreview?.valor || "",
+    },
+  });
+  
+  // Atualizar formulário quando faturaPreview mudar
+  React.useEffect(() => {
+    if (faturaPreview) {
+      form.reset({
+        cliente: faturaPreview.cliente || "",
+        referencia: faturaPreview.referencia || "",
+        vencimento: faturaPreview.vencimento || "",
+        endereco: faturaPreview.endereco || "",
+        leituraAnterior: faturaPreview.leituraAnterior || 0,
+        leituraAtual: faturaPreview.leituraAtual || 0,
+        valor: faturaPreview.valor || "",
+      });
+    }
+  }, [faturaPreview, form]);
+  
+  const handleConfirmarFatura = (data: z.infer<typeof faturaSchema>) => {
+    // Em um sistema real, salvaríamos a fatura no banco de dados
+    toast({
+      title: "Fatura confirmada",
+      description: `Fatura de ${data.cliente} para o período ${data.referencia} foi criada com sucesso.`,
+    });
+    
+    setIsUploadModalOpen(false);
+    
+    // Limpar referências
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+    
+    // Atualizar a lista de faturas (em um sistema real, recarregaríamos do banco)
+    // Aqui apenas simulamos a exibição da nova fatura
+  };
 
   return (
     <div className="p-8">
@@ -89,10 +220,23 @@ const FaturasPage = () => {
           <h1 className="text-2xl font-bold">Faturas</h1>
           <p className="text-muted-foreground">Gerencie todas as faturas da sua usina solar</p>
         </div>
-        <Button className="bg-green-600 hover:bg-green-700" onClick={() => setIsNovaFaturaModalOpen(true)}>
-          <span className="mr-2">+</span>
-          Nova Fatura
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+            <Upload className="h-4 w-4 mr-2" />
+            Importar Fatura
+            <input 
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              accept=".pdf,.jpg,.jpeg,.png"
+              className="hidden"
+            />
+          </Button>
+          <Button className="bg-green-600 hover:bg-green-700" onClick={() => setIsNovaFaturaModalOpen(true)}>
+            <span className="mr-2">+</span>
+            Nova Fatura
+          </Button>
+        </div>
       </div>
 
       <div className="flex gap-4 mb-6">
@@ -209,6 +353,142 @@ const FaturasPage = () => {
         onClose={() => setIsQrCodeModalOpen(false)}
         fatura={faturaAtual}
       />
+      
+      {/* Modal para revisão de fatura importada */}
+      <Dialog open={isUploadModalOpen} onOpenChange={setIsUploadModalOpen}>
+        <DialogContent className="sm:max-w-[550px]">
+          <DialogHeader>
+            <DialogTitle>Revisão de fatura importada</DialogTitle>
+            <DialogDescription>
+              Verifique os dados extraídos da fatura e faça os ajustes necessários.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleConfirmarFatura)} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="cliente"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cliente</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="referencia"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Referência</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="vencimento"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Data de Vencimento</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="valor"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Valor</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <FormField
+                control={form.control}
+                name="endereco"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Endereço</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="leituraAnterior"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Leitura Anterior (kWh)</FormLabel>
+                      <FormControl>
+                        <Input type="number" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="leituraAtual"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Leitura Atual (kWh)</FormLabel>
+                      <FormControl>
+                        <Input type="number" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              {form.getValues('leituraAnterior') && form.getValues('leituraAtual') && (
+                <div className="bg-gray-50 p-3 rounded-md border">
+                  <p className="text-sm font-medium">Consumo calculado: {form.getValues('leituraAtual') - form.getValues('leituraAnterior')} kWh</p>
+                </div>
+              )}
+              
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsUploadModalOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button type="submit" className="bg-green-600 hover:bg-green-700">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Confirmar Fatura
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
