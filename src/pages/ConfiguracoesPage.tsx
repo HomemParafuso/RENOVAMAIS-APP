@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,11 +24,94 @@ import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import PixConfigModal from "@/components/configuracoes/PixConfigModal";
 
+interface ConfiguracaoGeral {
+  nomeEmpresa: string;
+  cnpj: string;
+  telefone: string;
+  email: string;
+  endereco: string;
+}
+
+interface ConfiguracaoTarifas {
+  tarifaUso: string;
+  tarifaEnergia: string;
+}
+
+interface ConfiguracaoNotificacoes {
+  emailRemetente: string;
+  nomeRemetente: string;
+  notificacaoAutomatica: boolean;
+  templateFatura: string;
+  templateLembrete: string;
+  templateAtraso: string;
+}
+
 const ConfiguracoesPage = () => {
   const { toast } = useToast();
   const [isPixConfigModalOpen, setIsPixConfigModalOpen] = useState(false);
+  
+  // Estados para configurações
+  const [configGeral, setConfigGeral] = useState<ConfiguracaoGeral>({
+    nomeEmpresa: "Renova Mais Energia",
+    cnpj: "",
+    telefone: "",
+    email: "",
+    endereco: ""
+  });
+  
+  const [configTarifas, setConfigTarifas] = useState<ConfiguracaoTarifas>({
+    tarifaUso: "",
+    tarifaEnergia: ""
+  });
+  
+  const [configNotificacoes, setConfigNotificacoes] = useState<ConfiguracaoNotificacoes>({
+    emailRemetente: "",
+    nomeRemetente: "Renova Mais Energia",
+    notificacaoAutomatica: false,
+    templateFatura: "",
+    templateLembrete: "",
+    templateAtraso: ""
+  });
+
+  // Carregar configurações do localStorage ao iniciar
+  useEffect(() => {
+    const loadedConfigGeral = localStorage.getItem('configGeral');
+    if (loadedConfigGeral) {
+      setConfigGeral(JSON.parse(loadedConfigGeral));
+    }
+    
+    const loadedConfigTarifas = localStorage.getItem('configTarifas');
+    if (loadedConfigTarifas) {
+      setConfigTarifas(JSON.parse(loadedConfigTarifas));
+    }
+    
+    const loadedConfigNotificacoes = localStorage.getItem('configNotificacoes');
+    if (loadedConfigNotificacoes) {
+      setConfigNotificacoes(JSON.parse(loadedConfigNotificacoes));
+    }
+  }, []);
+
+  const handleInputChangeGeral = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+    setConfigGeral(prev => ({ ...prev, [id]: value }));
+  };
+
+  const handleInputChangeTarifas = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+    setConfigTarifas(prev => ({ ...prev, [id]: value }));
+  };
+
+  const handleInputChangeNotificacoes = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { id, value } = e.target;
+    setConfigNotificacoes(prev => ({ ...prev, [id]: value }));
+  };
+
+  const handleSwitchChangeNotificacoes = (checked: boolean) => {
+    setConfigNotificacoes(prev => ({ ...prev, notificacaoAutomatica: checked }));
+  };
 
   const handleSaveGeral = () => {
+    localStorage.setItem('configGeral', JSON.stringify(configGeral));
     toast({
       title: "Configurações gerais salvas",
       description: "As configurações gerais foram salvas com sucesso!",
@@ -36,6 +119,7 @@ const ConfiguracoesPage = () => {
   };
 
   const handleSaveTarifas = () => {
+    localStorage.setItem('configTarifas', JSON.stringify(configTarifas));
     toast({
       title: "Configurações de tarifas salvas",
       description: "As configurações de tarifas foram salvas com sucesso!",
@@ -43,6 +127,7 @@ const ConfiguracoesPage = () => {
   };
 
   const handleSaveNotificacoes = () => {
+    localStorage.setItem('configNotificacoes', JSON.stringify(configNotificacoes));
     toast({
       title: "Configurações de notificações salvas",
       description: "As configurações de notificações foram salvas com sucesso!",
@@ -81,25 +166,51 @@ const ConfiguracoesPage = () => {
             <CardContent className="space-y-4">
               <div>
                 <Label htmlFor="nomeEmpresa">Nome da Empresa</Label>
-                <Input id="nomeEmpresa" placeholder="Nome da sua empresa" defaultValue="Renova Mais Energia" />
+                <Input 
+                  id="nomeEmpresa" 
+                  placeholder="Nome da sua empresa" 
+                  value={configGeral.nomeEmpresa}
+                  onChange={handleInputChangeGeral}
+                />
               </div>
               <div>
                 <Label htmlFor="cnpj">CNPJ</Label>
-                <Input id="cnpj" placeholder="CNPJ da empresa" />
+                <Input 
+                  id="cnpj" 
+                  placeholder="CNPJ da empresa" 
+                  value={configGeral.cnpj}
+                  onChange={handleInputChangeGeral}
+                />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="telefone">Telefone</Label>
-                  <Input id="telefone" placeholder="Telefone para contato" />
+                  <Input 
+                    id="telefone" 
+                    placeholder="Telefone para contato" 
+                    value={configGeral.telefone}
+                    onChange={handleInputChangeGeral}
+                  />
                 </div>
                 <div>
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" placeholder="Email para contato" />
+                  <Input 
+                    id="email" 
+                    type="email" 
+                    placeholder="Email para contato" 
+                    value={configGeral.email}
+                    onChange={handleInputChangeGeral}
+                  />
                 </div>
               </div>
               <div>
                 <Label htmlFor="endereco">Endereço</Label>
-                <Input id="endereco" placeholder="Endereço completo" />
+                <Input 
+                  id="endereco" 
+                  placeholder="Endereço completo" 
+                  value={configGeral.endereco}
+                  onChange={handleInputChangeGeral}
+                />
               </div>
 
               <div className="flex justify-end">
@@ -123,11 +234,23 @@ const ConfiguracoesPage = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="tarifaUso">Tarifa de Uso (TU)</Label>
-                  <Input id="tarifaUso" type="number" placeholder="0.00" />
+                  <Input 
+                    id="tarifaUso" 
+                    type="number" 
+                    placeholder="0.00" 
+                    value={configTarifas.tarifaUso}
+                    onChange={handleInputChangeTarifas}
+                  />
                 </div>
                 <div>
                   <Label htmlFor="tarifaEnergia">Tarifa de Energia (TE)</Label>
-                  <Input id="tarifaEnergia" type="number" placeholder="0.00" />
+                  <Input 
+                    id="tarifaEnergia" 
+                    type="number" 
+                    placeholder="0.00" 
+                    value={configTarifas.tarifaEnergia}
+                    onChange={handleInputChangeTarifas}
+                  />
                 </div>
               </div>
 
@@ -152,15 +275,30 @@ const ConfiguracoesPage = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="emailRemetente">Email do Remetente</Label>
-                  <Input id="emailRemetente" type="email" placeholder="seu@email.com" />
+                  <Input 
+                    id="emailRemetente" 
+                    type="email" 
+                    placeholder="seu@email.com" 
+                    value={configNotificacoes.emailRemetente}
+                    onChange={handleInputChangeNotificacoes}
+                  />
                 </div>
                 <div>
                   <Label htmlFor="nomeRemetente">Nome do Remetente</Label>
-                  <Input id="nomeRemetente" placeholder="Nome da Empresa" defaultValue="Renova Mais Energia" />
+                  <Input 
+                    id="nomeRemetente" 
+                    placeholder="Nome da Empresa" 
+                    value={configNotificacoes.nomeRemetente}
+                    onChange={handleInputChangeNotificacoes}
+                  />
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                <Switch id="notificacaoAutomatica" />
+                <Switch 
+                  id="notificacaoAutomatica" 
+                  checked={configNotificacoes.notificacaoAutomatica}
+                  onCheckedChange={handleSwitchChangeNotificacoes}
+                />
                 <Label htmlFor="notificacaoAutomatica">Enviar notificações automáticas</Label>
               </div>
             </CardContent>
@@ -180,6 +318,8 @@ const ConfiguracoesPage = () => {
                   id="templateFatura" 
                   placeholder="Olá {nome}, sua fatura no valor de {valor} está disponível..."
                   className="min-h-[100px]"
+                  value={configNotificacoes.templateFatura}
+                  onChange={handleInputChangeNotificacoes}
                 />
               </div>
               <div>
@@ -188,6 +328,8 @@ const ConfiguracoesPage = () => {
                   id="templateLembrete" 
                   placeholder="Olá {nome}, lembre-se que sua fatura vence em {dias} dias..."
                   className="min-h-[100px]"
+                  value={configNotificacoes.templateLembrete}
+                  onChange={handleInputChangeNotificacoes}
                 />
               </div>
               <div>
@@ -196,6 +338,8 @@ const ConfiguracoesPage = () => {
                   id="templateAtraso" 
                   placeholder="Olá {nome}, sua fatura no valor de {valor} está atrasada há {dias} dias..."
                   className="min-h-[100px]"
+                  value={configNotificacoes.templateAtraso}
+                  onChange={handleInputChangeNotificacoes}
                 />
               </div>
 

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { 
@@ -48,7 +49,10 @@ interface Geradora {
 
 const RelatoriosPage = () => {
   const [periodo, setPeriodo] = useState("6M");
-  const [dataInicio, setDataInicio] = useState<Date>(subMonths(new Date(), 6));
+  const [dataInicio, setDataInicio] = useState<Date>(() => {
+    // Definir data inicial baseada no período selecionado
+    return subMonths(new Date(), 6);
+  });
   const [dataFim, setDataFim] = useState<Date>(new Date());
   const [activeTab, setActiveTab] = useState("financeiro");
   const [isLoading, setIsLoading] = useState(false);
@@ -56,10 +60,31 @@ const RelatoriosPage = () => {
   
   // Estados para os dados dos gráficos
   const [receitaData, setReceitaData] = useState([]);
-  const [economiaData, setEconomiaData] = useState([]);
+  const [despesasData, setDespesasData] = useState([]);
   const [geracaoData, setGeracaoData] = useState([]);
   const [geracaoPorUsinaData, setGeracaoPorUsinaData] = useState([]);
   const [geradoras, setGeradoras] = useState<Geradora[]>([]);
+
+  // Efeito para atualizar data de início quando o período mudar
+  useEffect(() => {
+    let novaDataInicio;
+    
+    switch(periodo) {
+      case "3M":
+        novaDataInicio = subMonths(new Date(), 3);
+        break;
+      case "6M":
+        novaDataInicio = subMonths(new Date(), 6);
+        break;
+      case "12M":
+        novaDataInicio = subMonths(new Date(), 12);
+        break;
+      default:
+        novaDataInicio = subMonths(new Date(), 6);
+    }
+    
+    setDataInicio(novaDataInicio);
+  }, [periodo]);
 
   // Busca geradoras cadastradas ao carregar a página
   useEffect(() => {
@@ -112,8 +137,8 @@ const RelatoriosPage = () => {
         
         // Converter datas para o formato esperado pela API (YYYY-MM-DD)
         const formatarData = (data: Date) => format(data, "yyyy-MM-dd");
-        const dataInicioFormatada = formatarData(subMonths(new Date(), 6)); // Últimos 6 meses
-        const dataFimFormatada = formatarData(new Date());
+        const dataInicioFormatada = formatarData(dataInicio);
+        const dataFimFormatada = formatarData(dataFim);
         
         // Buscar dados de energia mensal
         const dadosMensais = await fetchGrowattEnergyData(
@@ -140,17 +165,18 @@ const RelatoriosPage = () => {
           valor: Math.floor(item.valor * 0.8) // 80% da geração como receita
         }));
         
-        const economiasCalculadas = dadosFormatados.map(item => ({
+        // Simular dados de despesas (em um caso real, seriam carregados do banco)
+        const despesasCalculadas = dadosFormatados.map(item => ({
           mes: item.mes,
-          valor: Math.floor(item.valor * 0.2) // 20% da geração como economia
+          valor: Math.floor(item.valor * 0.3) // 30% da geração como despesa (simulado)
         }));
         
         setReceitaData(receitasCalculadas);
-        setEconomiaData(economiasCalculadas);
+        setDespesasData(despesasCalculadas);
         
         toast({
           title: "Dados reais carregados",
-          description: `Relatórios atualizados com dados reais da API Growatt.`,
+          description: `Relatórios atualizados com dados reais da API Growatt para período de ${periodo}.`,
           variant: "default"
         });
       } else {
@@ -206,13 +232,13 @@ const RelatoriosPage = () => {
           valor: Math.floor(item.valor * 0.8) // Simplificação: receita é 80% da geração
         }));
         
-        const economiasSimuladas = dadosGeracao.map(item => ({
+        const despesasSimuladas = dadosGeracao.map(item => ({
           mes: item.mes,
-          valor: Math.floor(item.valor * 0.2) // Simplificação: economia é 20% da geração
+          valor: Math.floor(item.valor * 0.3) // Simplificação: despesas são 30% da geração
         }));
         
         setReceitaData(receitasSimuladas);
-        setEconomiaData(economiasSimuladas);
+        setDespesasData(despesasSimuladas);
         
         toast({
           title: "Dados atualizados",
@@ -237,7 +263,7 @@ const RelatoriosPage = () => {
   // Efeito para carregar dados quando o período muda
   useEffect(() => {
     buscarDadosReais();
-  }, [periodo]);
+  }, [periodo, dataInicio, dataFim]);
 
   // Função para mudar o período
   const handleChangePeriodo = (novoPeriodo: string) => {
@@ -311,7 +337,7 @@ const RelatoriosPage = () => {
                 <CalendarComponent
                   mode="single"
                   selected={dataInicio}
-                  onSelect={setDataInicio}
+                  onSelect={(date) => date && setDataInicio(date)}
                   initialFocus
                   locale={ptBR}
                   className="pointer-events-auto"
@@ -344,7 +370,7 @@ const RelatoriosPage = () => {
                 <CalendarComponent
                   mode="single"
                   selected={dataFim}
-                  onSelect={setDataFim}
+                  onSelect={(date) => date && setDataFim(date)}
                   initialFocus
                   locale={ptBR}
                   className="pointer-events-auto"
@@ -426,7 +452,7 @@ const RelatoriosPage = () => {
 
             <Card className="p-6">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-medium">Economia Gerada aos Clientes</h3>
+                <h3 className="text-lg font-medium">Despesas</h3>
                 <Button variant="outline" size="sm">
                   <Download className="h-4 w-4 mr-2" />
                   Exportar
@@ -440,14 +466,14 @@ const RelatoriosPage = () => {
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart
-                      data={economiaData}
+                      data={despesasData}
                       margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
                       <XAxis dataKey="mes" />
                       <YAxis />
-                      <Tooltip formatter={(value) => [`R$ ${value}`, 'Economia']} />
-                      <Line type="monotone" dataKey="valor" name="Economia (R$)" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} />
+                      <Tooltip formatter={(value) => [`R$ ${value}`, 'Despesas']} />
+                      <Line type="monotone" dataKey="valor" name="Despesas (R$)" stroke="#ef4444" strokeWidth={2} dot={{ r: 4 }} />
                     </LineChart>
                   </ResponsiveContainer>
                 )}
@@ -456,13 +482,29 @@ const RelatoriosPage = () => {
           </div>
         </TabsContent>
         <TabsContent value="clientes">
-          <div className="flex items-center justify-center h-[400px] text-gray-500">
-            Esta seção está em desenvolvimento.
+          <div className="p-6 mt-4 bg-white rounded-lg border">
+            <div className="flex items-center justify-center h-[300px] flex-col">
+              <BarChart2 className="h-12 w-12 text-gray-300 mb-4" />
+              <h3 className="text-lg font-medium text-gray-500 mb-2">Relatórios de Clientes</h3>
+              <p className="text-gray-400">Esta seção está em desenvolvimento.</p>
+              <Button className="mt-4 bg-green-600 hover:bg-green-700">
+                <Users className="h-4 w-4 mr-2" />
+                Cadastrar Clientes
+              </Button>
+            </div>
           </div>
         </TabsContent>
         <TabsContent value="operacional">
-          <div className="flex items-center justify-center h-[400px] text-gray-500">
-            Esta seção está em desenvolvimento.
+          <div className="p-6 mt-4 bg-white rounded-lg border">
+            <div className="flex items-center justify-center h-[300px] flex-col">
+              <BarChart2 className="h-12 w-12 text-gray-300 mb-4" />
+              <h3 className="text-lg font-medium text-gray-500 mb-2">Relatórios Operacionais</h3>
+              <p className="text-gray-400">Esta seção está em desenvolvimento.</p>
+              <Button className="mt-4 bg-green-600 hover:bg-green-700">
+                <BarChart2 className="h-4 w-4 mr-2" />
+                Configurar Métricas
+              </Button>
+            </div>
           </div>
         </TabsContent>
         <TabsContent value="geracao">

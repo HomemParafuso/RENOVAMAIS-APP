@@ -59,12 +59,27 @@ export const fetchGrowattEnergyData = async (
     
     // Generate realistic data based on period type
     if (periodType === "month") {
-      // Return monthly data for the last 6 months (using the current date as reference)
-      const currentDate = new Date();
+      // Calculate how many months to generate based on date range
+      const startDate = new Date(dateStart);
+      const endDate = new Date(dateEnd);
+      
+      // Extract year and month
+      const startYear = startDate.getFullYear();
+      const startMonth = startDate.getMonth();
+      const endYear = endDate.getFullYear();
+      const endMonth = endDate.getMonth();
+      
+      // Calculate total months between dates
+      const monthDiff = (endYear - startYear) * 12 + (endMonth - startMonth);
+      const numMonths = Math.min(Math.max(monthDiff, 1), 12); // At least 1 month, max 12 months
+      
+      console.log(`Generating data for ${numMonths} months`);
+      
       const monthlyData = [];
       
-      for (let i = 5; i >= 0; i--) {
-        const month = new Date(currentDate);
+      // Generate monthly data from end date backwards
+      for (let i = 0; i < numMonths; i++) {
+        const month = new Date(endDate);
         month.setMonth(month.getMonth() - i);
         
         const year = month.getFullYear();
@@ -83,7 +98,8 @@ export const fetchGrowattEnergyData = async (
         });
       }
       
-      return monthlyData;
+      // Reverse to get chronological order
+      return monthlyData.reverse();
     }
     
     // Return simulated data for other period types
