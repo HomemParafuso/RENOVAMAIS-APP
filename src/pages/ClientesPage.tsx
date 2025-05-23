@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MoreVertical, Search, Eye, Edit, Send } from "lucide-react";
@@ -30,9 +31,8 @@ interface Cliente {
   usina: string;
 }
 
-// This function is needed to add the correct typings based on the implementation
-// of EditarClienteModal in the read-only files
 const ClientesPage = () => {
+  const [clientes, setClientes] = useState<Cliente[]>([]);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isNovoClienteModalOpen, setIsNovoClienteModalOpen] = useState(false);
@@ -41,16 +41,12 @@ const ClientesPage = () => {
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const clientes: Cliente[] = [
-    {
-      id: 1,
-      nome: "Pablio Tacyanno",
-      cpf: "",
-      tipoCalculo: "Percentual de Economia",
-      status: "Ativo",
-      usina: "Usina Solar São Paulo I"
-    }
-  ];
+  // Carregar clientes do localStorage
+  useEffect(() => {
+    const clientesSalvos = JSON.parse(localStorage.getItem('clientes') || '[]');
+    setClientes(clientesSalvos);
+    console.log('Clientes carregados:', clientesSalvos);
+  }, [isNovoClienteModalOpen]); // Recarregar quando modal fechar
 
   const handleEnviarConvite = (cliente: Cliente) => {
     toast({
@@ -138,92 +134,97 @@ const ClientesPage = () => {
       </div>
 
       <div className="bg-white rounded-md border overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead 
-                className="cursor-pointer"
-                onClick={() => handleSort("nome")}
-              >
-                Nome {sortColumn === "nome" && (sortDirection === "asc" ? "↑" : sortDirection === "desc" ? "↓" : "")}
-              </TableHead>
-              <TableHead 
-                className="cursor-pointer"
-                onClick={() => handleSort("cpf")}
-              >
-                CPF/CNPJ {sortColumn === "cpf" && (sortDirection === "asc" ? "↑" : sortDirection === "desc" ? "↓" : "")}
-              </TableHead>
-              <TableHead 
-                className="cursor-pointer"
-                onClick={() => handleSort("tipoCalculo")}
-              >
-                Tipo de Cálculo {sortColumn === "tipoCalculo" && (sortDirection === "asc" ? "↑" : sortDirection === "desc" ? "↓" : "")}
-              </TableHead>
-              <TableHead 
-                className="cursor-pointer"
-                onClick={() => handleSort("usina")}
-              >
-                Usina {sortColumn === "usina" && (sortDirection === "asc" ? "↑" : sortDirection === "desc" ? "↓" : "")}
-              </TableHead>
-              <TableHead 
-                className="cursor-pointer"
-                onClick={() => handleSort("status")}
-              >
-                Status {sortColumn === "status" && (sortDirection === "asc" ? "↑" : sortDirection === "desc" ? "↓" : "")}
-              </TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sortedClientes.map((cliente) => (
-              <TableRow key={cliente.id}>
-                <TableCell className="py-4">
-                  <div className="flex items-center">
-                    <div className="h-8 w-8 bg-green-100 text-green-600 rounded-full flex items-center justify-center font-medium mr-3">
-                      {cliente.nome.charAt(0)}
-                    </div>
-                    <span className="font-medium">{cliente.nome}</span>
-                  </div>
-                </TableCell>
-                <TableCell>{cliente.cpf || '-'}</TableCell>
-                <TableCell>{cliente.tipoCalculo}</TableCell>
-                <TableCell>{cliente.usina}</TableCell>
-                <TableCell>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    {cliente.status}
-                  </span>
-                </TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreVertical className="h-5 w-5" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleViewClient(cliente)}>
-                        <Eye className="h-4 w-4 mr-2" />
-                        Ver Detalhes
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleEditClient(cliente)}>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleEnviarConvite(cliente)}>
-                        <Send className="h-4 w-4 mr-2" />
-                        Enviar Convite
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
+        {clientes.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            <p>Nenhum cliente cadastrado ainda.</p>
+            <p className="text-sm mt-2">Clique em "Novo Cliente" para começar.</p>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead 
+                  className="cursor-pointer"
+                  onClick={() => handleSort("nome")}
+                >
+                  Nome {sortColumn === "nome" && (sortDirection === "asc" ? "↑" : sortDirection === "desc" ? "↓" : "")}
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer"
+                  onClick={() => handleSort("cpf")}
+                >
+                  CPF/CNPJ {sortColumn === "cpf" && (sortDirection === "asc" ? "↑" : sortDirection === "desc" ? "↓" : "")}
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer"
+                  onClick={() => handleSort("tipoCalculo")}
+                >
+                  Tipo de Cálculo {sortColumn === "tipoCalculo" && (sortDirection === "asc" ? "↑" : sortDirection === "desc" ? "↓" : "")}
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer"
+                  onClick={() => handleSort("usina")}
+                >
+                  Usina {sortColumn === "usina" && (sortDirection === "asc" ? "↑" : sortDirection === "desc" ? "↓" : "")}
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer"
+                  onClick={() => handleSort("status")}
+                >
+                  Status {sortColumn === "status" && (sortDirection === "asc" ? "↑" : sortDirection === "desc" ? "↓" : "")}
+                </TableHead>
+                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {sortedClientes.map((cliente) => (
+                <TableRow key={cliente.id}>
+                  <TableCell className="py-4">
+                    <div className="flex items-center">
+                      <div className="h-8 w-8 bg-green-100 text-green-600 rounded-full flex items-center justify-center font-medium mr-3">
+                        {cliente.nome.charAt(0)}
+                      </div>
+                      <span className="font-medium">{cliente.nome}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>{cliente.cpf || '-'}</TableCell>
+                  <TableCell>{cliente.tipoCalculo}</TableCell>
+                  <TableCell>{cliente.usina}</TableCell>
+                  <TableCell>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      {cliente.status}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreVertical className="h-5 w-5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleViewClient(cliente)}>
+                          <Eye className="h-4 w-4 mr-2" />
+                          Ver Detalhes
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEditClient(cliente)}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEnviarConvite(cliente)}>
+                          <Send className="h-4 w-4 mr-2" />
+                          Enviar Convite
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </div>
 
-      {/* Since EditarClienteModal and NovoClienteModal are read-only files,
-          we need to match their interface exactly as implemented */}
       {clienteSelecionado && (
         <>
           <EditarClienteModal 

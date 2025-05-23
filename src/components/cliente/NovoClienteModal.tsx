@@ -21,13 +21,76 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/components/ui/use-toast";
 
 const NovoClienteModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+  const [cpfCnpj, setCpfCnpj] = useState("");
+  const [telefone, setTelefone] = useState("");
   const [tipoCalculo, setTipoCalculo] = useState("percentual");
+  const [percentualEconomia, setPercentualEconomia] = useState("");
   const [fonteTarifa, setFonteTarifa] = useState("global");
+  const [tusd, setTusd] = useState("");
+  const [te, setTe] = useState("");
   const [tipoIluminacao, setTipoIluminacao] = useState("fixo");
+  const [valorFixo, setValorFixo] = useState("");
+  const [valorPercentual, setValorPercentual] = useState("");
   const [activeTab, setActiveTab] = useState("informacoes");
   const { toast } = useToast();
 
   const handleSalvar = () => {
+    // Validação obrigatória dos campos pessoais
+    if (!nome.trim() || !email.trim() || !cpfCnpj.trim() || !telefone.trim()) {
+      toast({
+        title: "Erro de validação",
+        description: "Todos os campos de informações pessoais são obrigatórios!",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Criar objeto do cliente
+    const novoCliente = {
+      id: Date.now(), // ID temporário baseado em timestamp
+      nome: nome.trim(),
+      email: email.trim(),
+      cpf: cpfCnpj.trim(),
+      telefone: telefone.trim(),
+      tipoCalculo: tipoCalculo === "percentual" ? "Percentual de Economia" : "Valor Fixo",
+      percentualEconomia: tipoCalculo === "percentual" ? parseFloat(percentualEconomia) || 0 : 0,
+      fonteTarifa,
+      tusd: fonteTarifa === "customizada" ? parseFloat(tusd) || 0 : 0,
+      te: fonteTarifa === "customizada" ? parseFloat(te) || 0 : 0,
+      tipoIluminacao,
+      valorIluminacaoFixo: tipoIluminacao === "fixo" ? parseFloat(valorFixo) || 0 : 0,
+      valorIluminacaoPercentual: tipoIluminacao === "percentual" ? parseFloat(valorPercentual) || 0 : 0,
+      status: "Ativo",
+      usina: "Usina Solar São Paulo I", // Valor padrão
+      dataAdesao: new Date().toLocaleDateString('pt-BR'),
+      dataCriacao: new Date().toISOString()
+    };
+
+    // Salvar no localStorage
+    const clientesExistentes = JSON.parse(localStorage.getItem('clientes') || '[]');
+    const clientesAtualizados = [...clientesExistentes, novoCliente];
+    localStorage.setItem('clientes', JSON.stringify(clientesAtualizados));
+
+    console.log('Cliente salvo:', novoCliente);
+    console.log('Clientes no localStorage:', clientesAtualizados);
+
+    // Limpar formulário
+    setNome("");
+    setEmail("");
+    setCpfCnpj("");
+    setTelefone("");
+    setTipoCalculo("percentual");
+    setPercentualEconomia("");
+    setFonteTarifa("global");
+    setTusd("");
+    setTe("");
+    setTipoIluminacao("fixo");
+    setValorFixo("");
+    setValorPercentual("");
+    setActiveTab("informacoes");
+
     toast({
       title: "Cliente criado",
       description: "O cliente foi cadastrado com sucesso!",
@@ -65,23 +128,48 @@ const NovoClienteModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
           <TabsContent value="informacoes" className="space-y-4 mt-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="nome">Nome Completo</Label>
-                <Input id="nome" placeholder="Nome do cliente" />
+                <Label htmlFor="nome">Nome Completo *</Label>
+                <Input 
+                  id="nome" 
+                  placeholder="Nome do cliente" 
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
+                  required
+                />
               </div>
               <div>
-                <Label htmlFor="email">E-mail</Label>
-                <Input id="email" type="email" placeholder="email@exemplo.com" />
+                <Label htmlFor="email">E-mail *</Label>
+                <Input 
+                  id="email" 
+                  type="email" 
+                  placeholder="email@exemplo.com" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
               </div>
             </div>
             
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="cpfCnpj">CPF/CNPJ</Label>
-                <Input id="cpfCnpj" placeholder="CPF ou CNPJ" />
+                <Label htmlFor="cpfCnpj">CPF/CNPJ *</Label>
+                <Input 
+                  id="cpfCnpj" 
+                  placeholder="CPF ou CNPJ" 
+                  value={cpfCnpj}
+                  onChange={(e) => setCpfCnpj(e.target.value)}
+                  required
+                />
               </div>
               <div>
-                <Label htmlFor="telefone">Telefone</Label>
-                <Input id="telefone" placeholder="(00) 00000-0000" />
+                <Label htmlFor="telefone">Telefone *</Label>
+                <Input 
+                  id="telefone" 
+                  placeholder="(00) 00000-0000" 
+                  value={telefone}
+                  onChange={(e) => setTelefone(e.target.value)}
+                  required
+                />
               </div>
             </div>
 
@@ -104,7 +192,13 @@ const NovoClienteModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
               {tipoCalculo === "percentual" && (
                 <div className="mb-4">
                   <Label htmlFor="percentualEconomia" className="mb-2 block">Percentual de Economia (%)</Label>
-                  <Input id="percentualEconomia" type="number" placeholder="10" />
+                  <Input 
+                    id="percentualEconomia" 
+                    type="number" 
+                    placeholder="10" 
+                    value={percentualEconomia}
+                    onChange={(e) => setPercentualEconomia(e.target.value)}
+                  />
                 </div>
               )}
               
@@ -125,11 +219,25 @@ const NovoClienteModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
                     <Label htmlFor="tusd" className="mb-2 block">TUSD (R$)</Label>
-                    <Input id="tusd" type="number" step="0.01" placeholder="0.00" />
+                    <Input 
+                      id="tusd" 
+                      type="number" 
+                      step="0.01" 
+                      placeholder="0.00" 
+                      value={tusd}
+                      onChange={(e) => setTusd(e.target.value)}
+                    />
                   </div>
                   <div>
                     <Label htmlFor="te" className="mb-2 block">TE (R$)</Label>
-                    <Input id="te" type="number" step="0.01" placeholder="0.00" />
+                    <Input 
+                      id="te" 
+                      type="number" 
+                      step="0.01" 
+                      placeholder="0.00" 
+                      value={te}
+                      onChange={(e) => setTe(e.target.value)}
+                    />
                   </div>
                 </div>
               )}
@@ -151,12 +259,26 @@ const NovoClienteModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
               {tipoIluminacao === "fixo" ? (
                 <div className="mt-4">
                   <Label htmlFor="valorFixo" className="mb-2 block">Valor Fixo Iluminação (R$)</Label>
-                  <Input id="valorFixo" type="number" step="0.01" placeholder="0.00" />
+                  <Input 
+                    id="valorFixo" 
+                    type="number" 
+                    step="0.01" 
+                    placeholder="0.00" 
+                    value={valorFixo}
+                    onChange={(e) => setValorFixo(e.target.value)}
+                  />
                 </div>
               ) : (
                 <div className="mt-4">
                   <Label htmlFor="valorPercentual" className="mb-2 block">Valor Percentual da Tarifa TU+TE (%)</Label>
-                  <Input id="valorPercentual" type="number" step="0.01" placeholder="0" />
+                  <Input 
+                    id="valorPercentual" 
+                    type="number" 
+                    step="0.01" 
+                    placeholder="0" 
+                    value={valorPercentual}
+                    onChange={(e) => setValorPercentual(e.target.value)}
+                  />
                 </div>
               )}
             </div>
@@ -191,7 +313,14 @@ const NovoClienteModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
 
             <div>
               <Label htmlFor="emailAcesso">E-mail para Acesso</Label>
-              <Input id="emailAcesso" type="email" placeholder="email@exemplo.com" className="mt-1" />
+              <Input 
+                id="emailAcesso" 
+                type="email" 
+                placeholder="email@exemplo.com" 
+                className="mt-1" 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
             </div>
 
             <Button 

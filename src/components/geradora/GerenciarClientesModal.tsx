@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -32,6 +32,7 @@ interface Cliente {
   cpf: string;
   tipoCalculo: string;
   status: string;
+  geradoraId?: number;
 }
 
 interface Geradora {
@@ -49,24 +50,55 @@ const GerenciarClientesModal = ({
   geradora?: Geradora;
 }) => {
   const [filterText, setFilterText] = useState("");
+  const [clientesVinculados, setClientesVinculados] = useState<Cliente[]>([]);
   const { toast } = useToast();
   
-  // Mock data - in a real application, this would be filtered based on the geradora
-  const clientes: Cliente[] = [
-    {
-      id: 1,
-      nome: "Pablio Tacyanno",
-      cpf: "",
-      tipoCalculo: "Percentual de Economia",
-      status: "Ativo"
+  useEffect(() => {
+    if (isOpen && geradora) {
+      // Carregar clientes vinculados a esta geradora
+      const todosClientes = JSON.parse(localStorage.getItem('clientes') || '[]');
+      const clientesDaGeradora = todosClientes.filter((cliente: Cliente) => 
+        cliente.geradoraId === geradora.id
+      );
+      setClientesVinculados(clientesDaGeradora);
+      console.log('Clientes vinculados à geradora:', clientesDaGeradora);
     }
-  ];
+  }, [isOpen, geradora]);
   
-  const filteredClientes = clientes.filter(cliente => 
+  const filteredClientes = clientesVinculados.filter(cliente => 
     cliente.nome.toLowerCase().includes(filterText.toLowerCase())
   );
   
   const handleDesvincular = (cliente: Cliente) => {
+    // Remover a vinculação do cliente com a geradora
+    const todosClientes = JSON.parse(localStorage.getItem('clientes') || '[]');
+    const clientesAtualizados = todosClientes.map((c: Cliente) => {
+      if (c.id === cliente.id) {
+        const clienteDesvinculado = { ...c };
+        delete clienteDesvinculado.geradoraId;
+        return clienteDesvinculado;
+      }
+      return c;
+    });
+    
+    localStorage.setItem('clientes', JSON.stringify(clientesAtualizados));
+    
+    // Atualizar lista local
+    setClientesVinculados(prev => prev.filter(c => c.id !== cliente.id));
+    
+    // Atualizar contador de clientes na geradora
+    const geradoras = JSON.parse(localStorage.getItem('geradoras') || '[]');
+    const geradorasAtualizadas = geradoras.map((g: any) => {
+      if (g.id === geradora?.id) {
+        return { ...g, clientesVinculados: Math.max(0, (g.clientesVinculados || 0) - 1) };
+      }
+      return g;
+    });
+    localStorage.setItem('geradoras', JSON.stringify(geradorasAtualizadas));
+    
+    console.log('Cliente desvinculado:', cliente.nome);
+    console.log('Clientes atualizados:', clientesAtualizados);
+    
     toast({
       title: "Cliente desvinculado",
       description: `O cliente ${cliente.nome} foi desvinculado da geradora.`,

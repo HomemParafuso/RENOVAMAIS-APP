@@ -1,836 +1,289 @@
-import React, { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { 
-  Tabs, 
-  TabsContent, 
-  TabsList, 
-  TabsTrigger 
-} from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card } from "@/components/ui/card";
-import { Download, DollarSign, Users, BarChart2, Zap, Calendar, CalendarRange, Loader2, ArrowDown, ArrowUp } from "lucide-react";
-import { 
-  LineChart, 
-  Line, 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  Legend
-} from 'recharts';
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import React, { useState } from "react";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { format, subMonths } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { cn } from "@/lib/utils";
-import { useToast } from "@/components/ui/use-toast";
-import { fetchGrowattEnergyData, fetchGrowattPlantData, formatMonthlyDataForChart, formatDataByUsina } from "@/utils/growattApi";
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
-
-interface Geradora {
-  id: number;
-  nome: string;
-  potencia: string;
-  localizacao: string;
-  status: string;
-  clientesVinculados: number;
-  marcaInversor?: string;
-  apiKey?: string;
-}
-
-interface Cliente {
-  id: number;
-  nome: string;
-  consumoMedio: number;
-  economiaGerada: number;
-  receitaTotal: number;
-  faturasPendentes: number;
-  dataAdesao: string;
-}
+import { Calendar } from "@/components/ui/calendar"
+import { CalendarIcon } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import { addDays, format } from "date-fns"
+import { ptBR } from 'date-fns/locale';
+import { Input } from "@/components/ui/input";
+import { ResponsiveContainer, ComposedChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Bar, Line } from 'recharts';
 
 const RelatoriosPage = () => {
-  const [periodo, setPeriodo] = useState("6M");
-  const [dataInicio, setDataInicio] = useState<Date>(() => {
-    // Definir data inicial baseada no período selecionado
-    return subMonths(new Date(), 6);
-  });
-  const [dataFim, setDataFim] = useState<Date>(new Date());
-  const [activeTab, setActiveTab] = useState("financeiro");
-  const [isLoading, setIsLoading] = useState(false);
-  const [usinaSelecionada, setUsinaSelecionada] = useState<string>("todas");
-  const { toast } = useToast();
-  
-  // Estados para os dados dos gráficos
-  const [receitaData, setReceitaData] = useState([]);
-  const [despesasData, setDespesasData] = useState([]);
-  const [geracaoData, setGeracaoData] = useState([]);
-  const [geracaoPorUsinaData, setGeracaoPorUsinaData] = useState([]);
-  const [geradoras, setGeradoras] = useState<Geradora[]>([]);
-  
-  // Dados para a aba de clientes
-  const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [sortConfig, setSortConfig] = useState<{key: keyof Cliente, direction: 'ascending' | 'descending'} | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const clientesPorPagina = 5;
+  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [periodo, setPeriodo] = useState("mensal");
+  const [clientes, setClientes] = useState([
+    { id: 1, nome: "Cliente A", usina: "Usina X", economia: 150.00 },
+    { id: 2, nome: "Cliente B", usina: "Usina Y", economia: 220.50 },
+    { id: 3, nome: "Cliente C", usina: "Usina Z", economia: 180.75 },
+  ]);
+  const [geradoras, setGeradoras] = useState([
+    { id: 1, nome: "Usina X", capacidade: "500 kWp", producao: 12000 },
+    { id: 2, nome: "Usina Y", capacidade: "750 kWp", producao: 18000 },
+    { id: 3, nome: "Usina Z", capacidade: "1 MWp", producao: 25000 },
+  ]);
 
-  // Efeito para atualizar data de início quando o período mudar
-  useEffect(() => {
-    let novaDataInicio;
-    
-    switch(periodo) {
-      case "3M":
-        novaDataInicio = subMonths(new Date(), 3);
-        break;
-      case "6M":
-        novaDataInicio = subMonths(new Date(), 6);
-        break;
-      case "12M":
-        novaDataInicio = subMonths(new Date(), 12);
-        break;
-      default:
-        novaDataInicio = subMonths(new Date(), 6);
-    }
-    
-    setDataInicio(novaDataInicio);
-  }, [periodo]);
-
-  // Busca geradoras cadastradas ao carregar a página
-  useEffect(() => {
-    const carregarGeradoras = async () => {
-      try {
-        // Em um cenário real, isso seria uma chamada API
-        // Aqui estamos simulando com dados do localStorage se disponível
-        const geradorasArmazenadas = localStorage.getItem('geradoras');
-        if (geradorasArmazenadas) {
-          setGeradoras(JSON.parse(geradorasArmazenadas));
-        } else {
-          // Dados de exemplo se não houver nada no localStorage
-          setGeradoras([{
-            id: 1,
-            nome: "Usina Solar São Paulo I",
-            potencia: "500 kWp",
-            localizacao: "São Paulo, SP",
-            status: "Ativo",
-            clientesVinculados: 25,
-            marcaInversor: "growatt",
-            apiKey: "abc12345"
-          }]);
-        }
-      } catch (error) {
-        console.error("Erro ao carregar geradoras:", error);
-      }
-    };
-
-    carregarGeradoras();
-    carregarDadosClientes();
-  }, []);
-
-  // Função para carregar dados dos clientes
-  const carregarDadosClientes = () => {
-    // Em um caso real, esses dados viriam de uma API
-    const clientesMock: Cliente[] = [
-      {
-        id: 1,
-        nome: "Pablio Tacyanno",
-        consumoMedio: 350,
-        economiaGerada: 1200,
-        receitaTotal: 5800,
-        faturasPendentes: 1,
-        dataAdesao: "10/12/2024"
-      },
-      {
-        id: 2,
-        nome: "Maria Empreendimentos",
-        consumoMedio: 620,
-        economiaGerada: 2100,
-        receitaTotal: 8900,
-        faturasPendentes: 0,
-        dataAdesao: "22/01/2025"
-      },
-      {
-        id: 3,
-        nome: "João Comércio Ltda",
-        consumoMedio: 480,
-        economiaGerada: 1800,
-        receitaTotal: 7200,
-        faturasPendentes: 2,
-        dataAdesao: "05/11/2024"
-      },
-      {
-        id: 4,
-        nome: "Supermercado Bom Preço",
-        consumoMedio: 950,
-        economiaGerada: 3200,
-        receitaTotal: 12500,
-        faturasPendentes: 0,
-        dataAdesao: "15/09/2024"
-      },
-      {
-        id: 5,
-        nome: "Clínica Saúde Plena",
-        consumoMedio: 320,
-        economiaGerada: 1100,
-        receitaTotal: 4800,
-        faturasPendentes: 0,
-        dataAdesao: "18/03/2025"
-      },
-      {
-        id: 6,
-        nome: "Academia Fitness Total",
-        consumoMedio: 580,
-        economiaGerada: 1950,
-        receitaTotal: 7600,
-        faturasPendentes: 1,
-        dataAdesao: "02/02/2025"
-      },
-      {
-        id: 7,
-        nome: "Restaurante Sabor Caseiro",
-        consumoMedio: 420,
-        economiaGerada: 1450,
-        receitaTotal: 6200,
-        faturasPendentes: 0,
-        dataAdesao: "28/10/2024"
-      }
-    ];
-    
-    setClientes(clientesMock);
-  };
-
-  // Função para ordenar clientes
-  const sortClientes = (key: keyof Cliente) => {
-    let direction: 'ascending' | 'descending' = 'ascending';
-    
-    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
-      direction = 'descending';
-    }
-    
-    setSortConfig({ key, direction });
-  };
-
-  // Obter os clientes ordenados
-  const getSortedClientes = () => {
-    if (!sortConfig) return clientes;
-    
-    return [...clientes].sort((a, b) => {
-      if (a[sortConfig.key] < b[sortConfig.key]) {
-        return sortConfig.direction === 'ascending' ? -1 : 1;
-      }
-      if (a[sortConfig.key] > b[sortConfig.key]) {
-        return sortConfig.direction === 'ascending' ? 1 : -1;
-      }
-      return 0;
-    });
-  };
-
-  // Calcular clientes para a página atual
-  const indexUltimoCliente = currentPage * clientesPorPagina;
-  const indexPrimeiroCliente = indexUltimoCliente - clientesPorPagina;
-  const clientesAtuais = getSortedClientes().slice(indexPrimeiroCliente, indexUltimoCliente);
-  const totalPaginas = Math.ceil(clientes.length / clientesPorPagina);
-
-  // Função para buscar dados reais da API baseado nas geradoras cadastradas
-  const buscarDadosReais = async () => {
-    setIsLoading(true);
-    
-    try {
-      // Verificar se temos geradoras com API key do Growatt
-      const geradorasGrowatt = geradoras.filter(g => 
-        g.marcaInversor?.toLowerCase() === "growatt" && 
-        g.apiKey && 
-        g.apiKey.length > 5 &&
-        (usinaSelecionada === "todas" || g.nome === usinaSelecionada)
-      );
-
-      if (geradorasGrowatt.length > 0) {
-        console.log("Encontradas geradoras Growatt com API key:", geradorasGrowatt.length);
-        
-        // Usar a primeira geradora Growatt encontrada para buscar dados
-        const geradora = geradorasGrowatt[0];
-        console.log("Usando geradora para API:", geradora.nome, "com API key:", geradora.apiKey);
-        
-        // Converter datas para o formato esperado pela API (YYYY-MM-DD)
-        const formatarData = (data: Date) => format(data, "yyyy-MM-dd");
-        const dataInicioFormatada = formatarData(dataInicio);
-        const dataFimFormatada = formatarData(dataFim);
-        
-        // Buscar dados de energia mensal
-        const dadosMensais = await fetchGrowattEnergyData(
-          geradora.apiKey!,
-          "12345", // Plant ID (em um caso real, seria obtido de uma chamada anterior)
-          "month",
-          dataInicioFormatada,
-          dataFimFormatada
-        );
-        
-        console.log("Dados mensais obtidos:", dadosMensais);
-        
-        // Formatar dados para uso nos gráficos
-        const dadosFormatados = formatMonthlyDataForChart(dadosMensais);
-        setGeracaoData(dadosFormatados);
-        
-        // Simular dados por usina (em um caso real, faríamos múltiplas chamadas)
-        const dadosPorUsina = formatDataByUsina(dadosFormatados, geradora.nome);
-        setGeracaoPorUsinaData(dadosPorUsina);
-        
-        // Derivar dados financeiros a partir dos dados de geração
-        const receitasCalculadas = dadosFormatados.map(item => ({
-          mes: item.mes,
-          valor: Math.floor(item.valor * 0.8) // 80% da geração como receita
-        }));
-        
-        // Simular dados de despesas (em um caso real, seriam carregados do banco)
-        const despesasCalculadas = dadosFormatados.map(item => ({
-          mes: item.mes,
-          valor: Math.floor(item.valor * 0.3) // 30% da geração como despesa (simulado)
-        }));
-        
-        setReceitaData(receitasCalculadas);
-        setDespesasData(despesasCalculadas);
-        
-        toast({
-          title: "Dados reais carregados",
-          description: `Relatórios atualizados com dados reais da API Growatt para período de ${periodo}.`,
-          variant: "default"
-        });
-      } else {
-        console.log("Nenhuma geradora Growatt com API key encontrada, usando dados simulados");
-        
-        // Fallback para dados simulados caso não tenhamos geradoras com API key
-        const meses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
-        const anoAtual = new Date().getFullYear();
-        const mesAtual = new Date().getMonth();
-        
-        // Simular dados de geração por mês (em kWh)
-        const dadosGeracao = [];
-        const dadosGeradoraPorUsina = [];
-        
-        // Calcular quantos meses queremos baseado no periodo selecionado
-        let numMeses = 6; // padrão para 6M
-        if (periodo === "3M") numMeses = 3;
-        if (periodo === "12M") numMeses = 12;
-        
-        // Gerar dados para os últimos N meses
-        for (let i = 0; i < numMeses; i++) {
-          const mesIndex = (mesAtual - i + 12) % 12; // Garantir que não fique negativo
-          const mes = meses[mesIndex];
-          const anoMes = mesIndex > mesAtual ? (anoAtual - 1) : anoAtual;
-          const mesFormatado = `${mes}/${String(anoMes).substring(2)}`;
-          
-          // Gerar um valor com alguma variação para simular dados reais
-          const valorBase = 14000 + Math.floor(Math.random() * 3000 - 1000);
-          
-          dadosGeracao.push({
-            mes: mesFormatado,
-            valor: valorBase
-          });
-          
-          // Para cada geradora, adicionar uma entrada no gráfico por usina
-          const entradaPorUsina: any = { mes: mesFormatado };
-          geradoras.forEach(geradora => {
-            // Distribuir a geração total entre as usinas com alguma variação
-            const fatorUsina = geradora.id === 1 ? 0.65 : 0.35; // Uma usina gera mais que a outra
-            entradaPorUsina[geradora.nome] = Math.floor(valorBase * fatorUsina * (1 + (Math.random() * 0.2 - 0.1)));
-          });
-          
-          dadosGeradoraPorUsina.push(entradaPorUsina);
-        }
-        
-        // Inverter os arrays para que os dados mais antigos apareçam primeiro
-        setGeracaoData(dadosGeracao.reverse());
-        setGeracaoPorUsinaData(dadosGeradoraPorUsina.reverse());
-        
-        // Simular dados financeiros relacionados
-        const receitasSimuladas = dadosGeracao.map(item => ({
-          mes: item.mes,
-          valor: Math.floor(item.valor * 0.8) // Simplificação: receita é 80% da geração
-        }));
-        
-        const despesasSimuladas = dadosGeracao.map(item => ({
-          mes: item.mes,
-          valor: Math.floor(item.valor * 0.3) // Simplificação: despesas são 30% da geração
-        }));
-        
-        setReceitaData(receitasSimuladas);
-        setDespesasData(despesasSimuladas);
-        
-        toast({
-          title: "Dados atualizados",
-          description: `Relatórios atualizados com dados simulados para o período de ${periodo}.`,
-        });
-      }
-    } catch (error) {
-      console.error("Erro ao buscar dados da API:", error);
-      toast({
-        title: "Erro na atualização",
-        description: "Não foi possível obter dados das APIs dos inversores. Usando dados simulados.",
-        variant: "destructive"
-      });
-      
-      // Exibir o erro no console para debug
-      console.error("Detalhes do erro:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Função para calcular dados dos clientes baseado no período
   const calcularDadosClientesPorPeriodo = () => {
-    const multiplier = periodo === "3M" ? 0.5 : periodo === "6M" ? 1 : 2;
-    
-    return clientes.map(cliente => ({
+    return clientes.map((cliente) => ({
       ...cliente,
-      consumoMedio: Math.floor(cliente.consumoMedio * multiplier),
-      economiaGerada: Math.floor(cliente.economiaGerada * multiplier),
-      receitaTotal: Math.floor(cliente.receitaTotal * multiplier),
+      economiaNoPeriodo: cliente.economia * 1.1,
     }));
-  };
-
-  // Efeito para carregar dados quando o período, datas ou usina mudam
-  useEffect(() => {
-    buscarDadosReais();
-  }, [periodo, dataInicio, dataFim, usinaSelecionada]);
-
-  // Função para mudar o período
-  const handleChangePeriodo = (novoPeriodo: string) => {
-    setPeriodo(novoPeriodo);
-    // A atualização dos dados acontece via useEffect
-  };
-
-  // Função para atualizar relatórios manualmente
-  const handleAtualizarRelatorios = () => {
-    buscarDadosReais();
   };
 
   // Calculate clients with period data
   const clientesComDadosPeriodo = calcularDadosClientesPorPeriodo();
 
+  // Dados para gráfico de lucro líquido
+  const dadosLucroLiquido = [
+    { mes: 'Jan', receita: 28000, despesa: 18000, lucroLiquido: 10000 },
+    { mes: 'Fev', receita: 32000, despesa: 19000, lucroLiquido: 13000 },
+    { mes: 'Mar', receita: 30000, despesa: 20000, lucroLiquido: 10000 },
+    { mes: 'Abr', receita: 35000, despesa: 22000, lucroLiquido: 13000 },
+    { mes: 'Mai', receita: 38000, despesa: 23000, lucroLiquido: 15000 },
+    { mes: 'Jun', receita: 42000, despesa: 25000, lucroLiquido: 17000 },
+  ];
+
   return (
     <div className="p-8">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Central de Relatórios</h1>
-          <p className="text-muted-foreground">Analise o desempenho e dados da sua usina solar.</p>
+          <h1 className="text-2xl font-bold">Relatórios e Dashboards</h1>
+          <p className="text-muted-foreground">Acompanhe os resultados da sua usina solar</p>
+        </div>
+
+        <div className="flex items-center space-x-4">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={"outline"}
+                className={cn(
+                  "w-[300px] justify-start text-left font-normal",
+                  !date && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {date ? format(date, "PPP", { locale: ptBR }) : <span>Selecionar período</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                mode="single"
+                defaultMonth={date}
+                selected={date}
+                onSelect={setDate}
+                disabled={(date) =>
+                  date > addDays(new Date(), 1)
+                }
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+
+          <Input
+            type="search"
+            placeholder="Filtrar resultados..."
+            className="max-w-md"
+          />
         </div>
       </div>
 
-      <div className="flex flex-wrap items-end gap-4 mb-6">
-        <div>
-          <div className="flex gap-2 mb-1">
-            <Button 
-              variant={periodo === "3M" ? "default" : "outline"} 
-              size="sm" 
-              onClick={() => handleChangePeriodo("3M")}
-            >
-              3M
-            </Button>
-            <Button 
-              variant={periodo === "6M" ? "default" : "outline"} 
-              size="sm"
-              onClick={() => handleChangePeriodo("6M")}
-            >
-              6M
-            </Button>
-            <Button 
-              variant={periodo === "12M" ? "default" : "outline"} 
-              size="sm"
-              onClick={() => handleChangePeriodo("12M")}
-            >
-              12M
-            </Button>
-          </div>
-        </div>
-
-        <div className="flex gap-2">
-          <div>
-            <Label htmlFor="dataInicio" className="block text-sm mb-1">Data Início</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  id="dataInicio"
-                  variant={"outline"}
-                  className={cn(
-                    "w-[160px] justify-start text-left font-normal",
-                    !dataInicio && "text-muted-foreground"
-                  )}
-                >
-                  <Calendar className="mr-2 h-4 w-4" />
-                  {dataInicio ? (
-                    format(dataInicio, "dd/MM/yyyy")
-                  ) : (
-                    <span>Selecionar data</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <CalendarComponent
-                  mode="single"
-                  selected={dataInicio}
-                  onSelect={(date) => date && setDataInicio(date)}
-                  initialFocus
-                  locale={ptBR}
-                  className="pointer-events-auto"
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          <div>
-            <Label htmlFor="dataFim" className="block text-sm mb-1">Data Fim</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  id="dataFim"
-                  variant={"outline"}
-                  className={cn(
-                    "w-[160px] justify-start text-left font-normal",
-                    !dataFim && "text-muted-foreground"
-                  )}
-                >
-                  <Calendar className="mr-2 h-4 w-4" />
-                  {dataFim ? (
-                    format(dataFim, "dd/MM/yyyy")
-                  ) : (
-                    <span>Selecionar data</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <CalendarComponent
-                  mode="single"
-                  selected={dataFim}
-                  onSelect={(date) => date && setDataFim(date)}
-                  initialFocus
-                  locale={ptBR}
-                  className="pointer-events-auto"
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-        </div>
-
-        <div>
-          <Label htmlFor="usinaSelecionada" className="block text-sm mb-1">Usina Geradora</Label>
-          <Select value={usinaSelecionada} onValueChange={setUsinaSelecionada}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Selecionar usina" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todas">Todas as usinas</SelectItem>
-              {geradoras.map((geradora) => (
-                <SelectItem key={geradora.id} value={geradora.nome}>
-                  {geradora.nome}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <Button 
-          className="bg-green-600 hover:bg-green-700 ml-auto"
-          onClick={handleAtualizarRelatorios}
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Atualizando...
-            </>
-          ) : (
-            <>
-              <Download className="mr-2 h-4 w-4" />
-              Atualizar Relatórios
-            </>
-          )}
-        </Button>
-      </div>
-
-      <Tabs defaultValue="financeiro" value={activeTab} onValueChange={setActiveTab}>
+      <Tabs defaultValue="clientes" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="financeiro" className="flex items-center justify-center">
-            <DollarSign className="h-4 w-4 mr-2" />
-            Financeiro
-          </TabsTrigger>
-          <TabsTrigger value="clientes" className="flex items-center justify-center">
-            <Users className="h-4 w-4 mr-2" />
-            Clientes
-          </TabsTrigger>
-          <TabsTrigger value="geracao" className="flex items-center justify-center">
-            <Zap className="h-4 w-4 mr-2" />
-            Geração
-          </TabsTrigger>
+          <TabsTrigger value="clientes">Clientes</TabsTrigger>
+          <TabsTrigger value="geradoras">Geradoras</TabsTrigger>
+          <TabsTrigger value="lucro">Lucro Líquido</TabsTrigger>
         </TabsList>
-        <TabsContent value="financeiro">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
-            <Card className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-medium">Receita de Faturas Pagas</h3>
-                <Button variant="outline" size="sm">
-                  <Download className="h-4 w-4 mr-2" />
-                  Exportar
-                </Button>
-              </div>
-              <div className="h-[300px]">
-                {isLoading ? (
-                  <div className="h-full flex items-center justify-center">
-                    <Loader2 className="h-8 w-8 text-green-600 animate-spin" />
+
+        <TabsContent value="clientes" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Economia por Cliente</CardTitle>
+              <CardDescription>
+                Acompanhe a economia gerada para cada cliente no período.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Usina</TableHead>
+                    <TableHead className="text-right">Economia (R$)</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {clientesComDadosPeriodo.map((cliente) => (
+                    <TableRow key={cliente.id}>
+                      <TableCell className="font-medium">{cliente.nome}</TableCell>
+                      <TableCell>{cliente.usina}</TableCell>
+                      <TableCell className="text-right">
+                        R$ {cliente.economiaNoPeriodo.toFixed(2)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="geradoras" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Produção por Geradora</CardTitle>
+              <CardDescription>
+                Visualize a produção de energia por usina geradora.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Usina</TableHead>
+                    <TableHead>Capacidade</TableHead>
+                    <TableHead className="text-right">Produção (kWh)</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {geradoras.map((geradora) => (
+                    <TableRow key={geradora.id}>
+                      <TableCell className="font-medium">{geradora.nome}</TableCell>
+                      <TableCell>{geradora.capacidade}</TableCell>
+                      <TableCell className="text-right">
+                        {geradora.producao.toLocaleString()} kWh
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="lucro" className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Card de Resumo do Lucro */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold">Resumo do Lucro Líquido</CardTitle>
+                <CardDescription>Análise de receitas vs despesas no período</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                    <span className="text-sm text-green-600">Receita Total</span>
+                    <span className="text-lg font-bold text-green-700">R$ 205.000</span>
                   </div>
-                ) : (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart 
-                      data={receitaData}
-                      margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="mes" />
-                      <YAxis />
-                      <Tooltip formatter={(value) => [`R$ ${value}`, 'Receita']} />
-                      <Bar dataKey="valor" name="Receita (R$)" fill="#22c55e" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
-              </div>
+                  <div className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
+                    <span className="text-sm text-red-600">Despesas Totais</span>
+                    <span className="text-lg font-bold text-red-700">R$ 127.000</span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg border-2 border-blue-200">
+                    <span className="text-sm text-blue-600">Lucro Líquido</span>
+                    <span className="text-xl font-bold text-blue-700">R$ 78.000</span>
+                  </div>
+                  <div className="text-center text-sm text-gray-600">
+                    Margem de lucro: 38.0%
+                  </div>
+                </div>
+              </CardContent>
             </Card>
 
-            <Card className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-medium">Despesas</h3>
-                <Button variant="outline" size="sm">
-                  <Download className="h-4 w-4 mr-2" />
-                  Exportar
-                </Button>
-              </div>
-              <div className="h-[300px]">
-                {isLoading ? (
-                  <div className="h-full flex items-center justify-center">
-                    <Loader2 className="h-8 w-8 text-green-600 animate-spin" />
-                  </div>
-                ) : (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                      data={despesasData}
-                      margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="mes" />
-                      <YAxis />
-                      <Tooltip formatter={(value) => [`R$ ${value}`, 'Despesas']} />
-                      <Line type="monotone" dataKey="valor" name="Despesas (R$)" stroke="#ef4444" strokeWidth={2} dot={{ r: 4 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                )}
-              </div>
+            {/* Gráfico de Lucro Líquido */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold">Evolução do Lucro Líquido</CardTitle>
+                <CardDescription>Comparativo mensal de receitas, despesas e lucro</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <ComposedChart data={dadosLucroLiquido}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="mes" />
+                    <YAxis />
+                    <Tooltip 
+                      formatter={(value, name) => [
+                        `R$ ${Number(value).toLocaleString('pt-BR')}`,
+                        name === 'receita' ? 'Receita' : 
+                        name === 'despesa' ? 'Despesa' : 'Lucro Líquido'
+                      ]}
+                    />
+                    <Legend />
+                    <Bar dataKey="receita" fill="#22c55e" name="Receita" />
+                    <Bar dataKey="despesa" fill="#ef4444" name="Despesa" />
+                    <Line 
+                      type="monotone" 
+                      dataKey="lucroLiquido" 
+                      stroke="#3b82f6" 
+                      strokeWidth={3}
+                      name="Lucro Líquido"
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </CardContent>
             </Card>
           </div>
-        </TabsContent>
-        <TabsContent value="clientes">
-          <div className="mt-4 bg-white rounded-lg border">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-medium">Desempenho de Clientes - Período: {periodo}</h3>
-                <Button variant="outline" size="sm">
-                  <Download className="h-4 w-4 mr-2" />
-                  Exportar
-                </Button>
-              </div>
-              
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableCaption>Lista de clientes com dados do período selecionado ({periodo})</TableCaption>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead onClick={() => sortClientes('nome')} className="cursor-pointer">
-                        Nome
-                        {sortConfig?.key === 'nome' && (
-                          sortConfig.direction === 'ascending' 
-                            ? <ArrowUp className="inline h-4 w-4 ml-1" /> 
-                            : <ArrowDown className="inline h-4 w-4 ml-1" />
-                        )}
-                      </TableHead>
-                      <TableHead onClick={() => sortClientes('consumoMedio')} className="cursor-pointer text-right">
-                        Consumo Médio (kWh)
-                        {sortConfig?.key === 'consumoMedio' && (
-                          sortConfig.direction === 'ascending' 
-                            ? <ArrowUp className="inline h-4 w-4 ml-1" /> 
-                            : <ArrowDown className="inline h-4 w-4 ml-1" />
-                        )}
-                      </TableHead>
-                      <TableHead onClick={() => sortClientes('economiaGerada')} className="cursor-pointer text-right">
-                        Economia Gerada (R$)
-                        {sortConfig?.key === 'economiaGerada' && (
-                          sortConfig.direction === 'ascending' 
-                            ? <ArrowUp className="inline h-4 w-4 ml-1" /> 
-                            : <ArrowDown className="inline h-4 w-4 ml-1" />
-                        )}
-                      </TableHead>
-                      <TableHead onClick={() => sortClientes('receitaTotal')} className="cursor-pointer text-right">
-                        Receita Total (R$)
-                        {sortConfig?.key === 'receitaTotal' && (
-                          sortConfig.direction === 'ascending' 
-                            ? <ArrowUp className="inline h-4 w-4 ml-1" /> 
-                            : <ArrowDown className="inline h-4 w-4 ml-1" />
-                        )}
-                      </TableHead>
-                      <TableHead onClick={() => sortClientes('faturasPendentes')} className="cursor-pointer text-right">
-                        Faturas Pendentes
-                        {sortConfig?.key === 'faturasPendentes' && (
-                          sortConfig.direction === 'ascending' 
-                            ? <ArrowUp className="inline h-4 w-4 ml-1" /> 
-                            : <ArrowDown className="inline h-4 w-4 ml-1" />
-                        )}
-                      </TableHead>
-                      <TableHead onClick={() => sortClientes('dataAdesao')} className="cursor-pointer">
-                        Data de Adesão
-                        {sortConfig?.key === 'dataAdesao' && (
-                          sortConfig.direction === 'ascending' 
-                            ? <ArrowUp className="inline h-4 w-4 ml-1" /> 
-                            : <ArrowDown className="inline h-4 w-4 ml-1" />
-                        )}
-                      </TableHead>
+
+          {/* Tabela Detalhada de Lucro */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold">Detalhamento por Mês</CardTitle>
+              <CardDescription>Análise detalhada do lucro líquido mensal</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Mês</TableHead>
+                    <TableHead className="text-right">Receita</TableHead>
+                    <TableHead className="text-right">Despesas</TableHead>
+                    <TableHead className="text-right">Lucro Líquido</TableHead>
+                    <TableHead className="text-right">Margem (%)</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {dadosLucroLiquido.map((item) => (
+                    <TableRow key={item.mes}>
+                      <TableCell className="font-medium">{item.mes}</TableCell>
+                      <TableCell className="text-right text-green-600">
+                        R$ {item.receita.toLocaleString('pt-BR')}
+                      </TableCell>
+                      <TableCell className="text-right text-red-600">
+                        R$ {item.despesa.toLocaleString('pt-BR')}
+                      </TableCell>
+                      <TableCell className="text-right text-blue-600 font-bold">
+                        R$ {item.lucroLiquido.toLocaleString('pt-BR')}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {((item.lucroLiquido / item.receita) * 100).toFixed(1)}%
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {clientesComDadosPeriodo.slice(indexPrimeiroCliente, indexUltimoCliente).map((cliente) => (
-                      <TableRow key={cliente.id}>
-                        <TableCell className="font-medium">{cliente.nome}</TableCell>
-                        <TableCell className="text-right">{cliente.consumoMedio}</TableCell>
-                        <TableCell className="text-right">R$ {cliente.economiaGerada.toLocaleString()}</TableCell>
-                        <TableCell className="text-right">R$ {cliente.receitaTotal.toLocaleString()}</TableCell>
-                        <TableCell className="text-right">{cliente.faturasPendentes}</TableCell>
-                        <TableCell>{cliente.dataAdesao}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-              
-              <Pagination className="mt-4">
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious 
-                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                      className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
-                    />
-                  </PaginationItem>
-                  
-                  {Array.from({ length: totalPaginas }, (_, i) => i + 1).map((page) => (
-                    <PaginationItem key={page}>
-                      <PaginationLink 
-                        isActive={currentPage === page}
-                        onClick={() => setCurrentPage(page)}
-                      >
-                        {page}
-                      </PaginationLink>
-                    </PaginationItem>
                   ))}
-                  
-                  <PaginationItem>
-                    <PaginationNext 
-                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPaginas))}
-                      className={currentPage === totalPaginas ? "pointer-events-none opacity-50" : ""}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-            </div>
-          </div>
-        </TabsContent>
-        <TabsContent value="geracao">
-          <div className="mt-4 space-y-8">
-            <Card className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-medium">Geração de Energia Total (kWh)</h3>
-                <Button variant="outline" size="sm">
-                  <Download className="h-4 w-4 mr-2" />
-                  Exportar
-                </Button>
-              </div>
-              <div className="h-[300px]">
-                {isLoading ? (
-                  <div className="h-full flex items-center justify-center">
-                    <Loader2 className="h-8 w-8 text-green-600 animate-spin" />
-                  </div>
-                ) : (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart 
-                      data={geracaoData}
-                      margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="mes" />
-                      <YAxis />
-                      <Tooltip formatter={(value) => [`${value} kWh`, 'Geração']} />
-                      <Bar dataKey="valor" name="Geração (kWh)" fill="#f59e0b" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
-              </div>
-            </Card>
-            
-            <Card className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-medium">Geração de Energia por Usina (kWh)</h3>
-                <Button variant="outline" size="sm">
-                  <Download className="h-4 w-4 mr-2" />
-                  Exportar
-                </Button>
-              </div>
-              <div className="h-[300px]">
-                {isLoading ? (
-                  <div className="h-full flex items-center justify-center">
-                    <Loader2 className="h-8 w-8 text-green-600 animate-spin" />
-                  </div>
-                ) : (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={geracaoPorUsinaData}
-                      margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="mes" />
-                      <YAxis />
-                      <Tooltip formatter={(value) => [`${value} kWh`, 'Geração']} />
-                      <Legend />
-                      {geradoras.map((geradora, index) => (
-                        <Bar 
-                          key={geradora.id} 
-                          dataKey={geradora.nome} 
-                          name={geradora.nome} 
-                          fill={index === 0 ? "#22c55e" : "#3b82f6"} 
-                        />
-                      ))}
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
-              </div>
-            </Card>
-          </div>
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
