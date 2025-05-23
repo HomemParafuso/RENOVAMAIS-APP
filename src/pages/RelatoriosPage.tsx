@@ -428,6 +428,9 @@ const RelatoriosPage = () => {
     buscarDadosReais();
   };
 
+  // Calculate clients with period data
+  const clientesComDadosPeriodo = calcularDadosClientesPorPeriodo();
+
   return (
     <div className="p-8">
       <div className="flex justify-between items-center mb-6">
