@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { BarChart3, Users, FileText, AlertTriangle, FileUp, ChevronRight } from "lucide-react";
+import { BarChart3, Users, FileText, AlertTriangle, FileUp, ChevronRight, Download, X } from "lucide-react";
 import { PieChart, Pie, ResponsiveContainer, Cell, BarChart, Bar, XAxis, CartesianGrid, Tooltip } from 'recharts';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -66,6 +66,8 @@ const Dashboard = () => {
     geracaoTotal: "0 kWh",
     receitaMensal: []
   });
+  const [clientesSemFaturas, setClientesSemFaturas] = useState<any[]>([]);
+  const [clientesBaixados, setClientesBaixados] = useState<string[]>([]);
   
   // Carregar dados reais dos outros sistemas
   useEffect(() => {
@@ -82,6 +84,32 @@ const Dashboard = () => {
         // Carregar dados financeiros
         const receitasArmazenadas = localStorage.getItem('receitas');
         const receitas = receitasArmazenadas ? JSON.parse(receitasArmazenadas) : [];
+        
+        // Carregar clientes baixados manualmente
+        const clientesBaixadosArmazenados = localStorage.getItem('clientesBaixados');
+        const clientesBaixadosData = clientesBaixadosArmazenados ? JSON.parse(clientesBaixadosArmazenados) : [];
+        setClientesBaixados(clientesBaixadosData);
+        
+        // Identificar clientes sem faturas no mês atual
+        const mesAtual = new Date().getMonth();
+        const anoAtual = new Date().getFullYear();
+        
+        const clientesSemFaturasMes = clientes.filter((cliente: any) => {
+          if (cliente.status !== 'ativo') return false;
+          if (clientesBaixadosData.includes(cliente.id)) return false;
+          
+          // Verificar se tem fatura no mês atual
+          const temFaturaMes = faturas.some((fatura: any) => {
+            const dataFatura = new Date(fatura.dataEmissao);
+            return fatura.clienteId === cliente.id && 
+                   dataFatura.getMonth() === mesAtual && 
+                   dataFatura.getFullYear() === anoAtual;
+          });
+          
+          return !temFaturaMes;
+        });
+        
+        setClientesSemFaturas(clientesSemFaturasMes);
         
         // Calcular métricas
         const clientesAtivos = clientes.filter((c: any) => c.status === 'ativo').length;
@@ -143,7 +171,7 @@ const Dashboard = () => {
     };
 
     carregarDadosReais();
-  }, [activeTimeFrame]);
+  }, [activeTimeFrame, clientesBaixados]);
 
   // Dados para o gráfico de pizza
   const economyData = [
@@ -206,6 +234,36 @@ const Dashboard = () => {
       variant: "default"
     });
     navigate(`/clientes`);
+  };
+
+  const handleBaixarCliente = (clienteId: string) => {
+    const novosClientesBaixados = [...clientesBaixados, clienteId];
+    setClientesBaixados(novosClientesBaixados);
+    localStorage.setItem('clientesBaixados', JSON.stringify(novosClientesBaixados));
+    
+    toast({
+      title: "Cliente baixado",
+      description: "Cliente removido da lista de pendências",
+      variant: "default"
+    });
+  };
+
+  const handleExcluirPendencia = (clienteId: string) => {
+    handleBaixarCliente(clienteId);
+    toast({
+      title: "Pendência excluída",
+      description: "Cliente não aparecerá mais como pendente",
+      variant: "default"
+    });
+  };
+
+  const handleGerarFatura = (cliente: any) => {
+    setIsNovaFaturaModalOpen(true);
+    toast({
+      title: `Gerando fatura para ${cliente.nome}`,
+      description: "Abrindo modal para nova fatura",
+      variant: "default"
+    });
   };
 
   return (
@@ -304,34 +362,61 @@ const Dashboard = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Tipos de Cálculo</CardTitle>
+            <CardTitle>Clientes sem Faturas - {new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px] flex flex-col items-center justify-center">
-              <ResponsiveContainer width="100%" height="70%">
-                <PieChart>
-                  <Pie
-                    data={economyData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    dataKey="value"
-                    label={false}
-                  >
-                    {economyData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="text-center mt-4">
-                <p className="text-green-500 text-lg font-semibold">Economia 100%</p>
-                <div className="flex items-center justify-center mt-2">
-                  <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
-                  <span className="text-sm">Percentual de Economia</span>
+            <div className="h-[300px] overflow-y-auto">
+              {clientesSemFaturas.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center">
+                  <div className="flex justify-center mb-4">
+                    <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600">
+                        <path d="M5 12l5 5l10 -10"></path>
+                      </svg>
+                    </div>
+                  </div>
+                  <p className="text-gray-500">Todos os clientes têm faturas geradas!</p>
                 </div>
-              </div>
+              ) : (
+                <div className="space-y-3">
+                  {clientesSemFaturas.map((cliente) => (
+                    <div key={cliente.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                      <div className="flex-1">
+                        <h4 className="font-medium text-sm">{cliente.nome}</h4>
+                        <p className="text-xs text-gray-500">{cliente.email}</p>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleGerarFatura(cliente)}
+                          className="h-8 px-2"
+                        >
+                          <FileUp className="h-3 w-3 mr-1" />
+                          Gerar
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleBaixarCliente(cliente.id)}
+                          className="h-8 px-2"
+                        >
+                          <Download className="h-3 w-3 mr-1" />
+                          Baixar
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleExcluirPendencia(cliente.id)}
+                          className="h-8 px-2 text-red-600 hover:text-red-700"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
