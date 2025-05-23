@@ -1,7 +1,7 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, FileText, BarChart, Settings, Zap } from "lucide-react";
+import { LayoutDashboard, Users, FileText, BarChart, Settings, Zap, CreditCard } from "lucide-react";
 
 const SidebarItem = ({ to, icon: Icon, active, children }: { to: string; icon: React.ElementType; active: boolean; children: React.ReactNode }) => (
   <Link
@@ -18,6 +18,34 @@ const SidebarItem = ({ to, icon: Icon, active, children }: { to: string; icon: R
 const Sidebar = () => {
   const location = useLocation();
   const currentPath = location.pathname;
+  const [nomeEmpresa, setNomeEmpresa] = useState("Renova Mais Energia");
+
+  useEffect(() => {
+    // Carregar nome da empresa das configurações
+    const configGeral = localStorage.getItem('configGeral');
+    if (configGeral) {
+      const config = JSON.parse(configGeral);
+      if (config.nomeEmpresa) {
+        setNomeEmpresa(config.nomeEmpresa);
+      }
+    }
+  }, []);
+
+  // Atualizar quando as configurações mudarem
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const configGeral = localStorage.getItem('configGeral');
+      if (configGeral) {
+        const config = JSON.parse(configGeral);
+        if (config.nomeEmpresa) {
+          setNomeEmpresa(config.nomeEmpresa);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   return (
     <div className="w-56 bg-white border-r border-gray-100 h-screen flex flex-col">
@@ -28,7 +56,7 @@ const Sidebar = () => {
               <path d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 12a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM18.894 6.166a.75.75 0 00-1.06-1.06l-1.591 1.59a.75.75 0 101.06 1.061l1.591-1.59zM21.75 12a.75.75 0 01-.75.75h-2.25a.75.75 0 010-1.5H21a.75.75 0 01.75.75zM17.834 18.894a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 10-1.061 1.06l1.59 1.591zM12 18a.75.75 0 01.75.75V21a.75.75 0 01-1.5 0v-2.25A.75.75 0 0112 18zM7.758 17.303a.75.75 0 00-1.061-1.06l-1.591 1.59a.75.75 0 001.06 1.061l1.591-1.59zM6 12a.75.75 0 01-.75.75H3a.75.75 0 010-1.5h2.25A.75.75 0 016 12zM6.697 7.757a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 00-1.061 1.06l1.59 1.591z" />
             </svg>
           </div>
-          <h1 className="text-xl font-semibold text-blue-600">Renova Mais Energia</h1>
+          <h1 className="text-xl font-semibold text-blue-600">{nomeEmpresa}</h1>
         </Link>
       </div>
       <div className="flex-1 py-4 space-y-1 px-2">
@@ -43,6 +71,9 @@ const Sidebar = () => {
         </SidebarItem>
         <SidebarItem to="/faturas" icon={FileText} active={currentPath.startsWith("/faturas")}>
           Faturas
+        </SidebarItem>
+        <SidebarItem to="/recebimentos" icon={CreditCard} active={currentPath.startsWith("/recebimentos")}>
+          Recebimentos
         </SidebarItem>
         <SidebarItem to="/relatorios" icon={BarChart} active={currentPath.startsWith("/relatorios")}>
           Relatórios
