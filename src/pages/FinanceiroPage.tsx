@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -69,6 +68,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ComposedChart } from 'recharts';
 
 // Definição de tipos
 interface Despesa {
@@ -181,7 +181,7 @@ const despesaSchema = z.object({
 });
 
 const FinanceiroPage = () => {
-  const [tabAtiva, setTabAtiva] = useState<"despesas" | "receitas">("despesas");
+  const [tabAtiva, setTabAtiva] = useState<"despesas" | "receitas" | "resumo">("resumo");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [despesas, setDespesas] = useState<Despesa[]>(despesasData);
   const [receitas, setReceitas] = useState<Receita[]>(receitasData);
@@ -266,6 +266,40 @@ const FinanceiroPage = () => {
   const maiorCategoria = Object.entries(despesasPorCategoria)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 1);
+
+  // Calcular receita líquida
+  const calcularReceitaLiquida = () => {
+    const receitasMap = new Map();
+    const despesasMap = new Map();
+    
+    // Mapear receitas por mês
+    receitas.forEach(r => {
+      if (r.status === "pago" && r.dataPagamento) {
+        const mes = r.dataPagamento.substring(3); // MM/YYYY
+        receitasMap.set(mes, (receitasMap.get(mes) || 0) + r.valor);
+      }
+    });
+    
+    // Mapear despesas por mês
+    despesas.forEach(d => {
+      if (d.status === "pago" && d.dataPagamento) {
+        const mes = d.dataPagamento.substring(3); // MM/YYYY
+        despesasMap.set(mes, (despesasMap.get(mes) || 0) + d.valor);
+      }
+    });
+    
+    // Combinar dados
+    const meses = Array.from(new Set([...receitasMap.keys(), ...despesasMap.keys()])).sort();
+    
+    return meses.map(mes => ({
+      mes,
+      receita: receitasMap.get(mes) || 0,
+      despesa: despesasMap.get(mes) || 0,
+      liquida: (receitasMap.get(mes) || 0) - (despesasMap.get(mes) || 0)
+    }));
+  };
+
+  const dadosReceitaLiquida = calcularReceitaLiquida();
 
   // Adicionar nova despesa
   const onSubmit = (data: z.infer<typeof despesaSchema>) => {
@@ -389,6 +423,16 @@ const FinanceiroPage = () => {
       {/* Tabs */}
       <div className="flex border-b mb-6">
         <button
+          onClick={() => setTabAtiva("resumo")}
+          className={`px-4 py-2 font-medium ${
+            tabAtiva === "resumo" 
+              ? "border-b-2 border-green-600 text-green-600" 
+              : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          Resumo Financeiro
+        </button>
+        <button
           onClick={() => setTabAtiva("despesas")}
           className={`px-4 py-2 font-medium ${
             tabAtiva === "despesas" 
@@ -411,7 +455,57 @@ const FinanceiroPage = () => {
       </div>
 
       {/* Conteúdo da tab ativa */}
-      {tabAtiva === "despesas" ? (
+      {tabAtiva === "resumo" ? (
+        <div className="grid grid-cols-1 gap-8">
+          {/* Gráfico de Receita Líquida */}
+          <Card className="p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-medium">Receita Líquida (Receitas - Despesas)</h3>
+              <Button variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-2" />
+                Exportar
+              </Button>
+            </div>
+            <div className="h-[400px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={dadosReceitaLiquida}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="mes" />
+                  <YAxis />
+                  <Tooltip formatter={(value, name) => [`R$ ${value}`, name]} />
+                  <Legend />
+                  <Bar dataKey="receita" name="Receitas" fill="#22c55e" />
+                  <Bar dataKey="despesa" name="Despesas" fill="#ef4444" />
+                  <Line type="monotone" dataKey="liquida" name="Receita Líquida" stroke="#3b82f6" strokeWidth={3} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+          
+          {/* Resumo dos últimos meses */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="p-4">
+              <h4 className="font-medium text-sm text-gray-600 mb-2">Receitas do Mês</h4>
+              <p className="text-2xl font-bold text-green-600">
+                R$ {receitas.filter(r => r.status === "pago").reduce((sum, r) => sum + r.valor, 0).toFixed(2)}
+              </p>
+            </Card>
+            <Card className="p-4">
+              <h4 className="font-medium text-sm text-gray-600 mb-2">Despesas do Mês</h4>
+              <p className="text-2xl font-bold text-red-600">
+                R$ {despesas.filter(d => d.status === "pago").reduce((sum, d) => sum + d.valor, 0).toFixed(2)}
+              </p>
+            </Card>
+            <Card className="p-4">
+              <h4 className="font-medium text-sm text-gray-600 mb-2">Líquido do Mês</h4>
+              <p className="text-2xl font-bold text-blue-600">
+                R$ {(receitas.filter(r => r.status === "pago").reduce((sum, r) => sum + r.valor, 0) - 
+                     despesas.filter(d => d.status === "pago").reduce((sum, d) => sum + d.valor, 0)).toFixed(2)}
+              </p>
+            </Card>
+          </div>
+        </div>
+      ) : tabAtiva === "despesas" ? (
         <>
           <div className="flex justify-between mb-4">
             <div className="flex gap-4">

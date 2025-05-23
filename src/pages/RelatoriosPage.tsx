@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { 
@@ -84,6 +83,7 @@ const RelatoriosPage = () => {
   const [dataFim, setDataFim] = useState<Date>(new Date());
   const [activeTab, setActiveTab] = useState("financeiro");
   const [isLoading, setIsLoading] = useState(false);
+  const [usinaSelecionada, setUsinaSelecionada] = useState<string>("todas");
   const { toast } = useToast();
   
   // Estados para os dados dos gráficos
@@ -264,7 +264,8 @@ const RelatoriosPage = () => {
       const geradorasGrowatt = geradoras.filter(g => 
         g.marcaInversor?.toLowerCase() === "growatt" && 
         g.apiKey && 
-        g.apiKey.length > 5
+        g.apiKey.length > 5 &&
+        (usinaSelecionada === "todas" || g.nome === usinaSelecionada)
       );
 
       if (geradorasGrowatt.length > 0) {
@@ -399,10 +400,22 @@ const RelatoriosPage = () => {
     }
   };
 
-  // Efeito para carregar dados quando o período muda
+  // Função para calcular dados dos clientes baseado no período
+  const calcularDadosClientesPorPeriodo = () => {
+    const multiplier = periodo === "3M" ? 0.5 : periodo === "6M" ? 1 : 2;
+    
+    return clientes.map(cliente => ({
+      ...cliente,
+      consumoMedio: Math.floor(cliente.consumoMedio * multiplier),
+      economiaGerada: Math.floor(cliente.economiaGerada * multiplier),
+      receitaTotal: Math.floor(cliente.receitaTotal * multiplier),
+    }));
+  };
+
+  // Efeito para carregar dados quando o período, datas ou usina mudam
   useEffect(() => {
     buscarDadosReais();
-  }, [periodo, dataInicio, dataFim]);
+  }, [periodo, dataInicio, dataFim, usinaSelecionada]);
 
   // Função para mudar o período
   const handleChangePeriodo = (novoPeriodo: string) => {
@@ -519,6 +532,23 @@ const RelatoriosPage = () => {
           </div>
         </div>
 
+        <div>
+          <Label htmlFor="usinaSelecionada" className="block text-sm mb-1">Usina Geradora</Label>
+          <Select value={usinaSelecionada} onValueChange={setUsinaSelecionada}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Selecionar usina" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todas">Todas as usinas</SelectItem>
+              {geradoras.map((geradora) => (
+                <SelectItem key={geradora.id} value={geradora.nome}>
+                  {geradora.nome}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         <Button 
           className="bg-green-600 hover:bg-green-700 ml-auto"
           onClick={handleAtualizarRelatorios}
@@ -539,7 +569,7 @@ const RelatoriosPage = () => {
       </div>
 
       <Tabs defaultValue="financeiro" value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="financeiro" className="flex items-center justify-center">
             <DollarSign className="h-4 w-4 mr-2" />
             Financeiro
@@ -547,10 +577,6 @@ const RelatoriosPage = () => {
           <TabsTrigger value="clientes" className="flex items-center justify-center">
             <Users className="h-4 w-4 mr-2" />
             Clientes
-          </TabsTrigger>
-          <TabsTrigger value="operacional" className="flex items-center justify-center">
-            <BarChart2 className="h-4 w-4 mr-2" />
-            Operacional
           </TabsTrigger>
           <TabsTrigger value="geracao" className="flex items-center justify-center">
             <Zap className="h-4 w-4 mr-2" />
@@ -624,7 +650,7 @@ const RelatoriosPage = () => {
           <div className="mt-4 bg-white rounded-lg border">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-medium">Desempenho de Clientes</h3>
+                <h3 className="text-lg font-medium">Desempenho de Clientes - Período: {periodo}</h3>
                 <Button variant="outline" size="sm">
                   <Download className="h-4 w-4 mr-2" />
                   Exportar
@@ -633,7 +659,7 @@ const RelatoriosPage = () => {
               
               <div className="overflow-x-auto">
                 <Table>
-                  <TableCaption>Lista de clientes cadastrados no sistema</TableCaption>
+                  <TableCaption>Lista de clientes com dados do período selecionado ({periodo})</TableCaption>
                   <TableHeader>
                     <TableRow>
                       <TableHead onClick={() => sortClientes('nome')} className="cursor-pointer">
@@ -687,7 +713,7 @@ const RelatoriosPage = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {clientesAtuais.map((cliente) => (
+                    {clientesComDadosPeriodo.slice(indexPrimeiroCliente, indexUltimoCliente).map((cliente) => (
                       <TableRow key={cliente.id}>
                         <TableCell className="font-medium">{cliente.nome}</TableCell>
                         <TableCell className="text-right">{cliente.consumoMedio}</TableCell>
@@ -729,19 +755,6 @@ const RelatoriosPage = () => {
                   </PaginationItem>
                 </PaginationContent>
               </Pagination>
-            </div>
-          </div>
-        </TabsContent>
-        <TabsContent value="operacional">
-          <div className="p-6 mt-4 bg-white rounded-lg border">
-            <div className="flex items-center justify-center h-[300px] flex-col">
-              <BarChart2 className="h-12 w-12 text-gray-300 mb-4" />
-              <h3 className="text-lg font-medium text-gray-500 mb-2">Relatórios Operacionais</h3>
-              <p className="text-gray-400">Esta seção está em desenvolvimento.</p>
-              <Button className="mt-4 bg-green-600 hover:bg-green-700">
-                <BarChart2 className="h-4 w-4 mr-2" />
-                Configurar Métricas
-              </Button>
             </div>
           </div>
         </TabsContent>

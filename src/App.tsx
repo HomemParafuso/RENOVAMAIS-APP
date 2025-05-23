@@ -12,6 +12,7 @@ import ClientesPage from "./pages/ClientesPage";
 import GeradorasPage from "./pages/GeradorasPage";
 import FaturasPage from "./pages/FaturasPage";
 import FinanceiroPage from "./pages/FinanceiroPage";
+import PixPage from "./pages/PixPage";
 import RelatoriosPage from "./pages/RelatoriosPage";
 import ConfiguracoesPage from "./pages/ConfiguracoesPage";
 
@@ -29,6 +30,7 @@ const App = () => (
           <Route path="/geradoras" element={<Layout><GeradorasPage /></Layout>} />
           <Route path="/faturas" element={<Layout><FaturasPage /></Layout>} />
           <Route path="/financeiro" element={<Layout><FinanceiroPage /></Layout>} />
+          <Route path="/pix" element={<Layout><PixPage /></Layout>} />
           <Route path="/relatorios" element={<Layout><RelatoriosPage /></Layout>} />
           <Route path="/configuracoes" element={<Layout><ConfiguracoesPage /></Layout>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
