@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -39,7 +38,35 @@ const AdminClientes = () => {
       geradoraNome: 'Solar Tech Ltda',
       status: 'ativo',
       dataCadastro: '20/03/2025',
-      consumoMedio: 450
+      consumoMedio: 450,
+      imoveis: [
+        {
+          id: 1,
+          endereco: 'Rua das Flores, 123',
+          cidade: 'São Paulo',
+          estado: 'SP',
+          cep: '01234-567',
+          consumoMedio: 350,
+          potenciaInstalada: 5.5,
+          dataInstalacao: '15/01/2024',
+          status: 'ativo',
+          geradoraId: 1,
+          geradoraNome: 'Solar Tech Ltda'
+        },
+        {
+          id: 2,
+          endereco: 'Av. Paulista, 456',
+          cidade: 'São Paulo',
+          estado: 'SP',
+          cep: '01311-100',
+          consumoMedio: 100,
+          potenciaInstalada: 2.0,
+          dataInstalacao: '20/03/2024',
+          status: 'ativo',
+          geradoraId: 1,
+          geradoraNome: 'Solar Tech Ltda'
+        }
+      ]
     },
     {
       id: 2,
@@ -52,7 +79,22 @@ const AdminClientes = () => {
       geradoraNome: 'Green Energy Co',
       status: 'ativo',
       dataCadastro: '25/04/2025',
-      consumoMedio: 380
+      consumoMedio: 380,
+      imoveis: [
+        {
+          id: 3,
+          endereco: 'Rua Copacabana, 789',
+          cidade: 'Rio de Janeiro',
+          estado: 'RJ',
+          cep: '22070-001',
+          consumoMedio: 380,
+          potenciaInstalada: 4.2,
+          dataInstalacao: '10/02/2024',
+          status: 'ativo',
+          geradoraId: 2,
+          geradoraNome: 'Green Energy Co'
+        }
+      ]
     }
   ];
 
@@ -165,6 +207,7 @@ const AdminClientes = () => {
                 <TableHead>Geradora</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Consumo Médio</TableHead>
+                <TableHead>Imóveis</TableHead>
                 <TableHead>Data Cadastro</TableHead>
               </TableRow>
             </TableHeader>
@@ -190,6 +233,9 @@ const AdminClientes = () => {
                   <TableCell>{getStatusBadge(cliente.status)}</TableCell>
                   <TableCell>
                     <div className="text-sm">{cliente.consumoMedio} kWh</div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm">{cliente.imoveis.length} imóvel(is)</div>
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">{cliente.dataCadastro}</div>
