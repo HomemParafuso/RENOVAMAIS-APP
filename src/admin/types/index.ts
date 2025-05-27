@@ -25,6 +25,20 @@ export interface PlanoCobranca {
   salarioMinimoReferencia?: number;
 }
 
+export interface Imovel {
+  id: number;
+  endereco: string;
+  cidade: string;
+  estado: string;
+  cep: string;
+  consumoMedio: number;
+  potenciaInstalada: number;
+  dataInstalacao: string;
+  status: 'ativo' | 'inativo';
+  geradoraId: number;
+  geradoraNome: string;
+}
+
 export interface Cliente {
   id: number;
   nome: string;
@@ -37,6 +51,7 @@ export interface Cliente {
   status: 'ativo' | 'bloqueado' | 'pendente';
   dataCadastro: string;
   consumoMedio: number;
+  imoveis: Imovel[];
 }
 
 export interface AdminUser {

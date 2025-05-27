@@ -1,9 +1,10 @@
-
 import React, { useState, useEffect } from "react";
 import { BarChart3, FileText, TrendingDown, Zap, Download, Eye } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
+import ImovelSelector from '../components/ImovelSelector';
+import { Imovel } from '@/admin/types';
 
 const StatCard = ({ 
   title, 
@@ -40,12 +41,59 @@ const StatCard = ({
 );
 
 const ClienteDashboard = () => {
+  const [imovelSelecionado, setImovelSelecionado] = useState<number | null>(1);
+  
+  // Mock data para imóveis do cliente
+  const imoveisCliente: Imovel[] = [
+    {
+      id: 1,
+      endereco: "Rua das Flores, 123",
+      cidade: "São Paulo",
+      estado: "SP",
+      cep: "01234-567",
+      consumoMedio: 450,
+      potenciaInstalada: 5.5,
+      dataInstalacao: "15/01/2024",
+      status: "ativo",
+      geradoraId: 1,
+      geradoraNome: "Usina Solar São Paulo I"
+    },
+    {
+      id: 2,
+      endereco: "Av. Paulista, 456",
+      cidade: "São Paulo",
+      estado: "SP",
+      cep: "01310-100",
+      consumoMedio: 320,
+      potenciaInstalada: 3.2,
+      dataInstalacao: "20/03/2024",
+      status: "ativo",
+      geradoraId: 1,
+      geradoraNome: "Usina Solar São Paulo I"
+    }
+  ];
+
   const [dadosCliente, setDadosCliente] = useState({
     consumoMensal: "450 kWh",
     economiaMensal: "R$ 280,00",
     faturasPendentes: 1,
     proximoVencimento: "15/06/2025"
   });
+
+  // Atualizar dados quando o imóvel for alterado
+  useEffect(() => {
+    if (imovelSelecionado) {
+      const imovel = imoveisCliente.find(i => i.id === imovelSelecionado);
+      if (imovel) {
+        setDadosCliente({
+          consumoMensal: `${imovel.consumoMedio} kWh`,
+          economiaMensal: `R$ ${(imovel.consumoMedio * 0.62).toFixed(0)},00`,
+          faturasPendentes: imovel.id === 1 ? 1 : 0,
+          proximoVencimento: "15/06/2025"
+        });
+      }
+    }
+  }, [imovelSelecionado]);
 
   // Dados de consumo dos últimos 6 meses
   const dadosConsumo = [
@@ -72,6 +120,12 @@ const ClienteDashboard = () => {
 
   return (
     <div className="p-6">
+      <ImovelSelector 
+        imoveis={imoveisCliente}
+        imovelSelecionado={imovelSelecionado}
+        onImovelChange={setImovelSelecionado}
+      />
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard 
           title="Consumo Mensal" 

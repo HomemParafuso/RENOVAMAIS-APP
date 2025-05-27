@@ -1,12 +1,44 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Area, AreaChart } from 'recharts';
 import { TrendingUp, TrendingDown, Zap, DollarSign } from "lucide-react";
+import ImovelSelector from '../components/ImovelSelector';
+import { Imovel } from '@/admin/types';
 
 const ClienteConsumo = () => {
   const [periodoSelecionado, setPeriodoSelecionado] = useState("6M");
+  const [imovelSelecionado, setImovelSelecionado] = useState<number | null>(1);
+
+  // Mock data para imóveis do cliente
+  const imoveisCliente: Imovel[] = [
+    {
+      id: 1,
+      endereco: "Rua das Flores, 123",
+      cidade: "São Paulo",
+      estado: "SP",
+      cep: "01234-567",
+      consumoMedio: 450,
+      potenciaInstalada: 5.5,
+      dataInstalacao: "15/01/2024",
+      status: "ativo",
+      geradoraId: 1,
+      geradoraNome: "Usina Solar São Paulo I"
+    },
+    {
+      id: 2,
+      endereco: "Av. Paulista, 456",
+      cidade: "São Paulo",
+      estado: "SP",
+      cep: "01310-100",
+      consumoMedio: 320,
+      potenciaInstalada: 3.2,
+      dataInstalacao: "20/03/2024",
+      status: "ativo",
+      geradoraId: 1,
+      geradoraNome: "Usina Solar São Paulo I"
+    }
+  ];
 
   const dadosConsumoDetalhado = [
     { mes: 'Jan', consumoReal: 420, consumoEstimado: 450, economia: 250, tarifaConvencional: 320 },
@@ -48,6 +80,12 @@ const ClienteConsumo = () => {
           >12M</Button>
         </div>
       </div>
+
+      <ImovelSelector 
+        imoveis={imoveisCliente}
+        imovelSelecionado={imovelSelecionado}
+        onImovelChange={setImovelSelecionado}
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <Card>

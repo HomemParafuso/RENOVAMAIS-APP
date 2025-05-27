@@ -1,206 +1,187 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from '@/components/ui/dropdown-menu';
-import { Search, Plus, MoreVertical, Edit, Block, CheckCircle, Eye } from 'lucide-react';
+  Building2, 
+  Users, 
+  DollarSign, 
+  Search, 
+  Filter, 
+  Plus, 
+  Edit, 
+  Blocks, 
+  Eye 
+} from 'lucide-react';
 import { Geradora } from '../types';
 
 const AdminGeradoras = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  
-  const mockGeradoras: Geradora[] = [
+  const [geradoras, setGeradoras] = useState<Geradora[]>([
     {
       id: 1,
-      nome: 'Solar Tech Ltda',
-      email: 'contato@solartech.com',
+      nome: 'Usina Solar São Paulo I',
+      email: 'contato@usinasolarsp1.com.br',
       cnpj: '12.345.678/0001-90',
-      responsavel: 'João Silva',
+      responsavel: 'João da Silva',
       telefone: '(11) 99999-9999',
-      endereco: 'São Paulo, SP',
+      endereco: 'Avenida Paulista, 123',
       status: 'ativo',
-      planoCobranca: {
-        tipo: 'percentual',
-        percentual: 10,
-        salarioMinimoReferencia: 1412
-      },
-      limiteUsuarios: 50,
-      usuariosAtivos: 32,
-      dataCadastro: '15/03/2025',
-      ultimoPagamento: '01/05/2025'
+      planoCobranca: { tipo: 'percentual', percentual: 5 },
+      limiteUsuarios: 100,
+      usuariosAtivos: 50,
+      dataCadastro: '01/01/2024',
+      ultimoPagamento: '10/05/2024',
     },
     {
       id: 2,
-      nome: 'Green Energy Co',
-      email: 'admin@greenenergy.com',
+      nome: 'Usina Eólica Bahia II',
+      email: 'contato@usinaeolicaba2.com.br',
       cnpj: '98.765.432/0001-10',
-      responsavel: 'Maria Santos',
-      telefone: '(21) 88888-8888',
-      endereco: 'Rio de Janeiro, RJ',
+      responsavel: 'Maria Souza',
+      telefone: '(71) 88888-8888',
+      endereco: 'Rua da Praia, 456',
       status: 'pendente',
-      planoCobranca: {
-        tipo: 'por_usuario',
-        valorPorUsuario: 25,
-        limitePorUsuario: 30,
-        valorAcimaLimite: 35
-      },
-      limiteUsuarios: 30,
-      usuariosAtivos: 18,
-      dataCadastro: '20/04/2025'
-    }
-  ];
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'ativo':
-        return <Badge className="bg-green-100 text-green-800">Ativo</Badge>;
-      case 'bloqueado':
-        return <Badge className="bg-red-100 text-red-800">Bloqueado</Badge>;
-      case 'pendente':
-        return <Badge className="bg-yellow-100 text-yellow-800">Pendente</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
-
-  const filteredGeradoras = mockGeradoras.filter(geradora =>
-    geradora.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    geradora.cnpj.includes(searchTerm) ||
-    geradora.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+      planoCobranca: { tipo: 'fixo', valorFixo: 1000 },
+      limiteUsuarios: 50,
+      usuariosAtivos: 25,
+      dataCadastro: '15/02/2024',
+    },
+  ]);
 
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Gestão de Geradoras</h1>
-          <p className="text-muted-foreground">Gerencie todas as empresas geradoras do sistema</p>
+          <h1 className="text-2xl font-bold">Geradoras</h1>
+          <p className="text-muted-foreground">
+            Gerencie as geradoras de energia do sistema
+          </p>
         </div>
-        <Button className="bg-blue-600 hover:bg-blue-700">
-          <Plus className="h-4 w-4 mr-2" />
-          Nova Geradora
-        </Button>
+        <div className="flex items-center space-x-4">
+          <Input type="text" placeholder="Buscar geradora..." className="w-64" />
+          <Button variant="outline" size="sm">
+            <Search className="h-4 w-4 mr-2" />
+            Buscar
+          </Button>
+          <Button variant="outline" size="sm">
+            <Filter className="h-4 w-4 mr-2" />
+            Filtrar
+          </Button>
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            Adicionar
+          </Button>
+        </div>
       </div>
 
-      <Card className="mb-6">
-        <CardContent className="pt-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Buscar por nome, CNPJ ou email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Lista de Geradoras</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Empresa</TableHead>
-                <TableHead>Responsável</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Usuários</TableHead>
-                <TableHead>Plano</TableHead>
-                <TableHead>Último Pagamento</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredGeradoras.map((geradora) => (
-                <TableRow key={geradora.id}>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{geradora.nome}</div>
-                      <div className="text-sm text-gray-500">{geradora.cnpj}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{geradora.responsavel}</div>
-                      <div className="text-sm text-gray-500">{geradora.email}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>{getStatusBadge(geradora.status)}</TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      {geradora.usuariosAtivos}/{geradora.limiteUsuarios}
-                      <div className="text-xs text-gray-500">
-                        {Math.round((geradora.usuariosAtivos / geradora.limiteUsuarios) * 100)}% usado
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      {geradora.planoCobranca.tipo === 'percentual' && 
-                        `${geradora.planoCobranca.percentual}% SM`}
-                      {geradora.planoCobranca.tipo === 'por_usuario' && 
-                        `R$ ${geradora.planoCobranca.valorPorUsuario}/usuário`}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      {geradora.ultimoPagamento || 'Pendente'}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <Eye className="h-4 w-4 mr-2" />
-                          Ver Detalhes
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Editar
-                        </DropdownMenuItem>
-                        {geradora.status === 'ativo' ? (
-                          <DropdownMenuItem className="text-red-600">
-                            <Block className="h-4 w-4 mr-2" />
-                            Bloquear
-                          </DropdownMenuItem>
-                        ) : (
-                          <DropdownMenuItem className="text-green-600">
-                            <CheckCircle className="h-4 w-4 mr-2" />
-                            Ativar
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 gap-4">
+        {geradoras.map((geradora) => (
+          <Card key={geradora.id}>
+            <CardHeader>
+              <CardTitle className="flex justify-between items-center">
+                <div className="flex items-center space-x-2">
+                  <Building2 className="h-5 w-5 text-gray-500" />
+                  <span>{geradora.nome}</span>
+                </div>
+                <div>
+                  {geradora.status === 'ativo' && (
+                    <Badge variant="secondary">Ativo</Badge>
+                  )}
+                  {geradora.status === 'pendente' && (
+                    <Badge variant="outline">Pendente</Badge>
+                  )}
+                  {geradora.status === 'bloqueado' && (
+                    <Badge variant="destructive">Bloqueado</Badge>
+                  )}
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">
+                    Email
+                  </p>
+                  <p className="text-gray-900">{geradora.email}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">
+                    CNPJ
+                  </p>
+                  <p className="text-gray-900">{geradora.cnpj}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">
+                    Responsável
+                  </p>
+                  <p className="text-gray-900">{geradora.responsavel}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">
+                    Telefone
+                  </p>
+                  <p className="text-gray-900">{geradora.telefone}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">
+                    Endereço
+                  </p>
+                  <p className="text-gray-900">{geradora.endereco}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">
+                    Plano de Cobrança
+                  </p>
+                  <p className="text-gray-900">
+                    {geradora.planoCobranca.tipo}
+                    {geradora.planoCobranca.percentual &&
+                      ` (${geradora.planoCobranca.percentual}%)`}
+                    {geradora.planoCobranca.valorFixo &&
+                      ` (R$ ${geradora.planoCobranca.valorFixo})`}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">
+                    Limite de Usuários
+                  </p>
+                  <p className="text-gray-900">{geradora.limiteUsuarios}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">
+                    Usuários Ativos
+                  </p>
+                  <p className="text-gray-900">{geradora.usuariosAtivos}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">
+                    Data de Cadastro
+                  </p>
+                  <p className="text-gray-900">{geradora.dataCadastro}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">
+                    Último Pagamento
+                  </p>
+                  <p className="text-gray-900">
+                    {geradora.ultimoPagamento || 'N/A'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex justify-end mt-4 space-x-2">
+                <Button variant="outline" size="sm">
+                  <Eye className="h-4 w-4 mr-2" />
+                  Visualizar
+                </Button>
+                <Button size="sm">
+                  <Edit className="h-4 w-4 mr-2" />
+                  Editar
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 };
