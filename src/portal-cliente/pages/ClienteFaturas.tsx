@@ -1,9 +1,8 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Download, Eye, Search, Filter } from "lucide-react";
+import { Download, Eye, Search, Filter, FileText } from "lucide-react";
 
 const ClienteFaturas = () => {
   const [filtroMes, setFiltroMes] = useState("");

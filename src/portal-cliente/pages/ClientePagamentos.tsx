@@ -2,7 +2,7 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Clock, CreditCard, Pix } from "lucide-react";
+import { CheckCircle, Clock, CreditCard, Banknote } from "lucide-react";
 
 const ClientePagamentos = () => {
   const historicosPagamentos = [
@@ -78,7 +78,7 @@ const ClientePagamentos = () => {
                     <p className="text-lg font-bold">{fatura.valor}</p>
                     <div className="flex gap-2 mt-2">
                       <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-                        <Pix className="h-4 w-4 mr-2" />
+                        <Banknote className="h-4 w-4 mr-2" />
                         Pagar com PIX
                       </Button>
                       <Button size="sm" variant="outline">
@@ -115,7 +115,7 @@ const ClientePagamentos = () => {
                 <div className="flex items-center">
                   <div className="p-2 bg-green-100 rounded-full mr-4">
                     {pagamento.metodo === 'PIX' ? (
-                      <Pix className="h-4 w-4 text-green-600" />
+                      <Banknote className="h-4 w-4 text-green-600" />
                     ) : (
                       <CreditCard className="h-4 w-4 text-green-600" />
                     )}
