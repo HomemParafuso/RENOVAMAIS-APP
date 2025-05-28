@@ -6,6 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import NovaFaturaModal from "@/components/fatura/NovaFaturaModal";
+import { useAuth } from '@/context/AuthContext';
+import { useInvoice } from '@/context/InvoiceContext';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { InvoiceList } from '@/components/invoices/InvoiceList';
+import { NotificationList } from '@/components/notifications/NotificationList';
 
 const StatCard = ({ 
   title, 
@@ -68,6 +73,12 @@ const Dashboard = () => {
   });
   const [clientesSemFaturas, setClientesSemFaturas] = useState<any[]>([]);
   const [clientesBaixados, setClientesBaixados] = useState<string[]>([]);
+  const { user } = useAuth();
+  const { invoices, loading: invoicesLoading } = useInvoice();
+
+  const totalAmount = invoices.reduce((sum, invoice) => sum + invoice.amount, 0);
+  const pendingInvoices = invoices.filter((invoice) => invoice.status === 'pending');
+  const overdueInvoices = invoices.filter((invoice) => invoice.status === 'overdue');
   
   // Carregar dados reais dos outros sistemas
   useEffect(() => {
@@ -267,211 +278,264 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">Visão geral da sua usina solar</p>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <p className="text-muted-foreground">
+          Bem-vindo, {user?.email}
+        </p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total em Faturas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              R$ {totalAmount.toFixed(2)}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Faturas Pendentes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{pendingInvoices.length}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Faturas Vencidas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{overdueInvoices.length}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Tabs defaultValue="invoices" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="invoices">Faturas</TabsTrigger>
+          <TabsTrigger value="notifications">Notificações</TabsTrigger>
+        </TabsList>
+        <TabsContent value="invoices" className="space-y-4">
+          <InvoiceList invoices={invoices} loading={invoicesLoading} />
+        </TabsContent>
+        <TabsContent value="notifications" className="space-y-4">
+          <NotificationList />
+        </TabsContent>
+      </Tabs>
+
+      <div className="p-8">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-2xl font-bold">Dashboard</h1>
+            <p className="text-muted-foreground">Visão geral da sua usina solar</p>
+          </div>
+          <Button 
+            className="bg-green-600 hover:bg-green-700" 
+            onClick={() => setIsNovaFaturaModalOpen(true)}
+          >
+            <FileUp className="mr-2 h-4 w-4" />
+            Enviar Nova Fatura
+          </Button>
         </div>
-        <Button 
-          className="bg-green-600 hover:bg-green-700" 
-          onClick={() => setIsNovaFaturaModalOpen(true)}
-        >
-          <FileUp className="mr-2 h-4 w-4" />
-          Enviar Nova Fatura
-        </Button>
-      </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <StatCard 
-          title="Clientes Ativos" 
-          value={dadosConectados.clientesAtivos}
-          icon={Users} 
-          description={`de ${dadosConectados.clientesAtivos} clientes`}
-          iconBgColor="bg-green-100" 
-          iconColor="text-green-600" 
-          onClick={handleClientesClick}
-        />
-        <StatCard 
-          title="Faturas Pendentes" 
-          value={dadosConectados.faturasPendentes}
-          icon={FileText} 
-          description={`de ${dadosConectados.faturasPendentes + dadosConectados.faturasAtrasadas} faturas`}
-          iconBgColor="bg-yellow-100" 
-          iconColor="text-yellow-600" 
-          onClick={handleFaturasPendentesClick}
-        />
-        <StatCard 
-          title="Faturas Atrasadas" 
-          value={dadosConectados.faturasAtrasadas}
-          icon={AlertTriangle} 
-          description="necessitam atenção" 
-          iconBgColor="bg-red-100" 
-          iconColor="text-red-600" 
-          onClick={handleFaturasAtrasadasClick}
-        />
-        <StatCard 
-          title="Geração Total" 
-          value={dadosConectados.geracaoTotal}
-          icon={BarChart3} 
-          iconBgColor="bg-blue-100" 
-          iconColor="text-blue-600" 
-          change="12% este mês" 
-          trend="up" 
-          onClick={handleGeracaoTotalClick}
-        />
-      </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <StatCard 
+            title="Clientes Ativos" 
+            value={dadosConectados.clientesAtivos}
+            icon={Users} 
+            description={`de ${dadosConectados.clientesAtivos} clientes`}
+            iconBgColor="bg-green-100" 
+            iconColor="text-green-600" 
+            onClick={handleClientesClick}
+          />
+          <StatCard 
+            title="Faturas Pendentes" 
+            value={dadosConectados.faturasPendentes}
+            icon={FileText} 
+            description={`de ${dadosConectados.faturasPendentes + dadosConectados.faturasAtrasadas} faturas`}
+            iconBgColor="bg-yellow-100" 
+            iconColor="text-yellow-600" 
+            onClick={handleFaturasPendentesClick}
+          />
+          <StatCard 
+            title="Faturas Atrasadas" 
+            value={dadosConectados.faturasAtrasadas}
+            icon={AlertTriangle} 
+            description="necessitam atenção" 
+            iconBgColor="bg-red-100" 
+            iconColor="text-red-600" 
+            onClick={handleFaturasAtrasadasClick}
+          />
+          <StatCard 
+            title="Geração Total" 
+            value={dadosConectados.geracaoTotal}
+            icon={BarChart3} 
+            iconBgColor="bg-blue-100" 
+            iconColor="text-blue-600" 
+            change="12% este mês" 
+            trend="up" 
+            onClick={handleGeracaoTotalClick}
+          />
+        </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-        <Card className="col-span-2">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle>Receita Mensal</CardTitle>
-              <div className="flex gap-2">
-                <Button 
-                  variant={activeTimeFrame === "3M" ? "default" : "outline"} 
-                  size="sm"
-                  onClick={() => handleTimeFrameChange("3M")}
-                >3M</Button>
-                <Button 
-                  variant={activeTimeFrame === "6M" ? "default" : "outline"} 
-                  size="sm"
-                  onClick={() => handleTimeFrameChange("6M")}
-                >6M</Button>
-                <Button 
-                  variant={activeTimeFrame === "12M" ? "default" : "outline"} 
-                  size="sm"
-                  onClick={() => handleTimeFrameChange("12M")}
-                >12M</Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dadosConectados.receitaMensal}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="name" />
-                  <Tooltip />
-                  <Bar dataKey="receita" fill="#22c55e" name="Receita (R$)" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Clientes sem Faturas - {new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px] overflow-y-auto">
-              {clientesSemFaturas.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-center">
-                  <div className="flex justify-center mb-4">
-                    <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600">
-                        <path d="M5 12l5 5l10 -10"></path>
-                      </svg>
-                    </div>
-                  </div>
-                  <p className="text-gray-500">Todos os clientes têm faturas geradas!</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {clientesSemFaturas.map((cliente) => (
-                    <div key={cliente.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
-                      <div className="flex-1">
-                        <h4 className="font-medium text-sm">{cliente.nome}</h4>
-                        <p className="text-xs text-gray-500">{cliente.email}</p>
-                      </div>
-                      <div className="flex gap-1">
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => handleGerarFatura(cliente)}
-                          className="h-8 px-2"
-                        >
-                          <FileUp className="h-3 w-3 mr-1" />
-                          Gerar
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => handleBaixarCliente(cliente.id)}
-                          className="h-8 px-2"
-                        >
-                          <Download className="h-3 w-3 mr-1" />
-                          Baixar
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => handleExcluirPendencia(cliente.id)}
-                          className="h-8 px-2 text-red-600 hover:text-red-700"
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Top 5 Clientes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {topClientes.map((cliente) => (
-                <div 
-                  key={cliente.id} 
-                  className="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
-                  onClick={() => handleClienteClick(cliente)}
-                >
-                  <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-medium mr-3">
-                    {cliente.id}
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-medium">{cliente.nome}</h4>
-                    <p className="text-sm text-gray-500">{cliente.economia}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-medium">{cliente.valor}</p>
-                    <p className="text-sm text-gray-500">{cliente.faturas}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-center">
-              <AlertTriangle className="h-5 w-5 text-amber-500 mr-2" />
-              <CardTitle>Clientes em Atraso</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="flex items-center justify-center h-[200px] text-center">
-            <div>
-              <div className="flex justify-center mb-4">
-                <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600">
-                    <path d="M5 12l5 5l10 -10"></path>
-                  </svg>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+          <Card className="col-span-2">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle>Receita Mensal</CardTitle>
+                <div className="flex gap-2">
+                  <Button 
+                    variant={activeTimeFrame === "3M" ? "default" : "outline"} 
+                    size="sm"
+                    onClick={() => handleTimeFrameChange("3M")}
+                  >3M</Button>
+                  <Button 
+                    variant={activeTimeFrame === "6M" ? "default" : "outline"} 
+                    size="sm"
+                    onClick={() => handleTimeFrameChange("6M")}
+                  >6M</Button>
+                  <Button 
+                    variant={activeTimeFrame === "12M" ? "default" : "outline"} 
+                    size="sm"
+                    onClick={() => handleTimeFrameChange("12M")}
+                  >12M</Button>
                 </div>
               </div>
-              <p className="text-gray-500">Nenhum cliente em atraso!</p>
-            </div>
-          </CardContent>
-        </Card>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={dadosConectados.receitaMensal}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="name" />
+                    <Tooltip />
+                    <Bar dataKey="receita" fill="#22c55e" name="Receita (R$)" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Clientes sem Faturas - {new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px] overflow-y-auto">
+                {clientesSemFaturas.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center">
+                    <div className="flex justify-center mb-4">
+                      <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600">
+                          <path d="M5 12l5 5l10 -10"></path>
+                        </svg>
+                      </div>
+                    </div>
+                    <p className="text-gray-500">Todos os clientes têm faturas geradas!</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {clientesSemFaturas.map((cliente) => (
+                      <div key={cliente.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                        <div className="flex-1">
+                          <h4 className="font-medium text-sm">{cliente.nome}</h4>
+                          <p className="text-xs text-gray-500">{cliente.email}</p>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleGerarFatura(cliente)}
+                            className="h-8 px-2"
+                          >
+                            <FileUp className="h-3 w-3 mr-1" />
+                            Gerar
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleBaixarCliente(cliente.id)}
+                            className="h-8 px-2"
+                          >
+                            <Download className="h-3 w-3 mr-1" />
+                            Baixar
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleExcluirPendencia(cliente.id)}
+                            className="h-8 px-2 text-red-600 hover:text-red-700"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>Top 5 Clientes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {topClientes.map((cliente) => (
+                  <div 
+                    key={cliente.id} 
+                    className="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
+                    onClick={() => handleClienteClick(cliente)}
+                  >
+                    <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-medium mr-3">
+                      {cliente.id}
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-medium">{cliente.nome}</h4>
+                      <p className="text-sm text-gray-500">{cliente.economia}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">{cliente.valor}</p>
+                      <p className="text-sm text-gray-500">{cliente.faturas}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center">
+                <AlertTriangle className="h-5 w-5 text-amber-500 mr-2" />
+                <CardTitle>Clientes em Atraso</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="flex items-center justify-center h-[200px] text-center">
+              <div>
+                <div className="flex justify-center mb-4">
+                  <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600">
+                      <path d="M5 12l5 5l10 -10"></path>
+                    </svg>
+                  </div>
+                </div>
+                <p className="text-gray-500">Nenhum cliente em atraso!</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <NovaFaturaModal 
