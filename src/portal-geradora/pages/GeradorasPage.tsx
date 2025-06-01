@@ -10,21 +10,26 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Search, MoreVertical, Eye, Edit, Users, Zap } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import DetalhesGeradoraModal from "@/components/geradora/DetalhesGeradoraModal";
 import NovaGeradoraModal from "@/components/geradora/NovaGeradoraModal";
-import EditarGeradoraModal from "@/components/geradora/EditarGeradoraModal";
-import GerenciarClientesModal from "@/components/geradora/GerenciarClientesModal";
+import DetalhesUsinaModal from "@/components/geradora/DetalhesUsinaModal";
+import EditarUsinaModal from "@/components/geradora/EditarUsinaModal";
+import GerenciarClientesUsinaModal from "@/components/geradora/GerenciarClientesUsinaModal";
 import { useToast } from "@/components/ui/use-toast";
 
-interface Geradora {
+interface UsinaGeradora {
   id: number;
   nome: string;
   potencia: string;
   localizacao: string;
+  endereco?: string;
+  cnpj?: string;
   status: string;
   clientesVinculados: number;
   marcaInversor?: string;
   apiKey?: string;
+  descricao?: string;
+  dataInstalacao?: string;
+  dataCadastro?: string;
 }
 
 const GeradorasPage = () => {
@@ -32,8 +37,8 @@ const GeradorasPage = () => {
   const [isNovaGeradoraModalOpen, setIsNovaGeradoraModalOpen] = useState(false);
   const [isEditarGeradoraModalOpen, setIsEditarGeradoraModalOpen] = useState(false);
   const [isGerenciarClientesModalOpen, setIsGerenciarClientesModalOpen] = useState(false);
-  const [geradoraSelecionada, setGeradoraSelecionada] = useState<Geradora | undefined>(undefined);
-  const [geradoras, setGeradoras] = useState<Geradora[]>([]);
+  const [geradoraSelecionada, setGeradoraSelecionada] = useState<UsinaGeradora | undefined>(undefined);
+  const [geradoras, setGeradoras] = useState<UsinaGeradora[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
   const { toast } = useToast();
@@ -95,18 +100,18 @@ const GeradorasPage = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const handleVerDetalhes = (geradora: Geradora) => {
+  const handleVerDetalhes = (geradora: UsinaGeradora) => {
     setGeradoraSelecionada(geradora);
     setIsDetalheGeradoraModalOpen(true);
   };
 
-  const handleEditar = (geradora: Geradora) => {
+  const handleEditar = (geradora: UsinaGeradora) => {
     console.log("Editando geradora:", geradora);
     setGeradoraSelecionada({...geradora});
     setIsEditarGeradoraModalOpen(true);
   };
 
-  const handleGerenciarClientes = (geradora: Geradora) => {
+  const handleGerenciarClientes = (geradora: UsinaGeradora) => {
     setGeradoraSelecionada(geradora);
     setIsGerenciarClientesModalOpen(true);
   };
@@ -116,13 +121,13 @@ const GeradorasPage = () => {
   };
 
   // Adicionar nova geradora
-  const handleSaveNewGeradora = (novaGeradora: Geradora) => {
+  const handleSaveNewGeradora = (novaGeradora: UsinaGeradora) => {
     setGeradoras(geradoras => [...geradoras, novaGeradora]);
     console.log("Nova geradora adicionada:", novaGeradora);
   };
 
   // Atualizar geradora existente
-  const handleUpdateGeradora = (geradoraAtualizada: Geradora) => {
+  const handleUpdateGeradora = (geradoraAtualizada: UsinaGeradora) => {
     console.log("Atualizando geradora:", geradoraAtualizada);
     
     setGeradoras(geradoras => 
@@ -140,7 +145,7 @@ const GeradorasPage = () => {
   };
   
   // Excluir geradora
-  const handleDeleteGeradora = (geradora: Geradora) => {
+  const handleDeleteGeradora = (geradora: UsinaGeradora) => {
     setGeradoras(geradoras => geradoras.filter(g => g.id !== geradora.id));
     toast({
       title: "Geradora excluída",
@@ -266,7 +271,7 @@ const GeradorasPage = () => {
         )}
       </div>
 
-      <DetalhesGeradoraModal
+      <DetalhesUsinaModal
         isOpen={isDetalheGeradoraModalOpen}
         onClose={() => setIsDetalheGeradoraModalOpen(false)}
         geradora={geradoraSelecionada}
@@ -277,9 +282,10 @@ const GeradorasPage = () => {
         onClose={() => setIsNovaGeradoraModalOpen(false)}
         onSave={handleSaveNewGeradora}
         geradoras={geradoras}
+        isPortalGeradora={true}
       />
       
-      <EditarGeradoraModal
+      <EditarUsinaModal
         isOpen={isEditarGeradoraModalOpen}
         onClose={() => setIsEditarGeradoraModalOpen(false)}
         geradora={geradoraSelecionada}
@@ -287,7 +293,7 @@ const GeradorasPage = () => {
         onDelete={handleDeleteGeradora}
       />
       
-      <GerenciarClientesModal
+      <GerenciarClientesUsinaModal
         isOpen={isGerenciarClientesModalOpen}
         onClose={() => setIsGerenciarClientesModalOpen(false)}
         geradora={geradoraSelecionada}
