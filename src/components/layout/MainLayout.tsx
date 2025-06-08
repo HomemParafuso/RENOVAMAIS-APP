@@ -15,7 +15,7 @@ export function MainLayout({ children }: MainLayoutProps) {
     <div className="min-h-screen bg-background">
       <header className="border-b">
         <div className="container flex h-16 items-center px-4">
-          <div className="mr-4 font-bold">Renova Mais Energia</div>
+          <div className="mr-4 text-2xl font-extrabold tracking-wide">Renovva Mais</div>
           <nav className="flex items-center space-x-4 lg:space-x-6">
             {user && (
               <>

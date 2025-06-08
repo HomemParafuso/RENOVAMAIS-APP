@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +9,10 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { FileText, QrCode, Copy, Check } from "lucide-react";
+import QRCode from 'qrcode';
+import { IPixIntegration } from '@/integrations/pix/IPixIntegration';
+import { sicrediPix } from '@/integrations/pix/sicrediPix';
+import { sicoobPix } from '@/integrations/pix/sicoobPix';
 
 interface Fatura {
   id: number;
@@ -19,6 +22,13 @@ interface Fatura {
   valor: string;
   status: string;
 }
+
+// Mapeia os códigos de banco para as implementações de integração PIX
+const pixIntegrations: { [key: string]: IPixIntegration } = {
+  '748': sicrediPix, // Sicredi
+  '756': sicoobPix,  // Sicoob
+  // Adicione outros bancos aqui conforme forem implementados
+};
 
 const DetalheFaturaModal = ({ 
   isOpen, 
@@ -30,19 +40,75 @@ const DetalheFaturaModal = ({
   fatura?: Fatura;
 }) => {
   const { toast } = useToast();
-  const [codigoPix, setCodigoPix] = useState("");
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>("");
+  const [codigoPixCopiaECola, setCodigoPixCopiaECola] = useState<string>("");
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (fatura) {
-      // Gerar um código PIX aleatório baseado na fatura
-      const codePix = `00020126580014BR.GOV.BCB.PIX01369${fatura.id}${Date.now().toString().substring(0, 4)}@${Math.random().toString(36).substring(2, 7)}5204000053039865802BR5924RENOVA MAIS ENERGIA LTDA6009SAO PAULO62090505${fatura.id}${Math.random().toString(36).substring(2, 6)}6304${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
-      setCodigoPix(codePix);
+      const pixConfigStr = localStorage.getItem('pixConfig');
+      if (pixConfigStr) {
+        try {
+          const pixConfig = JSON.parse(pixConfigStr);
+          const { banco, tipoChave, chave } = pixConfig;
+
+          const integration = pixIntegrations[banco];
+
+          if (integration) {
+            // Assegura que o valor da fatura é um número formatado corretamente para o PIX
+            const valorFormatado = parseFloat(fatura.valor.replace('R$', '').replace('.', '').replace(',', '.')).toFixed(2);
+
+            const pixPayload = integration.generatePixPayload({
+              nome: "RENOVVA MAIS", // Substituir pelo nome da empresa ou dinâmico se necessário
+              chavepix: chave,
+              valor: valorFormatado,
+              cidade: "SAO PAULO", // Considerar tornar isso configurável no futuro
+              txtId: fatura.referencia || String(fatura.id), // Usar referência ou ID da fatura como ID da transação
+            });
+            setCodigoPixCopiaECola(pixPayload);
+
+            // Gerar QR Code a partir da payload
+            QRCode.toDataURL(pixPayload, { errorCorrectionLevel: 'H', width: 256 }, (err, url) => {
+              if (err) {
+                console.error("Erro ao gerar QR Code:", err);
+                toast({
+                  title: "Erro",
+                  description: "Não foi possível gerar o QR Code.",
+                  variant: "destructive",
+                });
+                setQrCodeDataUrl("");
+              } else {
+                setQrCodeDataUrl(url || "");
+              }
+            });
+
+          } else {
+            console.warn(`Integração PIX para o banco ${banco} não encontrada.`);
+            setCodigoPixCopiaECola("Erro: Banco não suportado para PIX.");
+            setQrCodeDataUrl("");
+          }
+        } catch (error) {
+          console.error("Erro ao parsear pixConfig do localStorage:", error);
+          toast({
+            title: "Erro de Configuração PIX",
+            description: "Não foi possível carregar as configurações do PIX.",
+            variant: "destructive",
+          });
+          setCodigoPixCopiaECola("Erro: Configuração PIX inválida.");
+          setQrCodeDataUrl("");
+        }
+      } else {
+        setCodigoPixCopiaECola("Configuração PIX não encontrada. Configure o PIX nas Configurações.");
+        setQrCodeDataUrl("");
+      }
+    } else {
+      setCodigoPixCopiaECola("");
+      setQrCodeDataUrl("");
     }
-  }, [fatura]);
+  }, [fatura, toast]);
 
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(codigoPix).then(() => {
+    navigator.clipboard.writeText(codigoPixCopiaECola).then(() => {
       setCopied(true);
       toast({
         title: "Código copiado",
@@ -120,15 +186,19 @@ const DetalheFaturaModal = ({
                 <div className="mt-4">
                   <p className="text-sm font-medium text-gray-700 mb-2">QR Code para Pagamento</p>
                   <div className="flex flex-col items-center space-y-4 p-4 bg-white rounded-lg border border-gray-200">
-                    <div className="w-48 h-48 flex items-center justify-center bg-gray-50 border border-gray-200 rounded-lg">
-                      <QrCode className="w-32 h-32 text-gray-800" />
-                    </div>
+                    {qrCodeDataUrl ? (
+                      <img src={qrCodeDataUrl} alt="QR Code PIX" className="w-48 h-48" />
+                    ) : (
+                      <div className="w-48 h-48 flex items-center justify-center bg-gray-50 border border-gray-200 rounded-lg text-gray-500 text-center">
+                        Não foi possível gerar o QR Code.
+                      </div>
+                    )}
                     
                     <div className="w-full">
                       <p className="text-xs text-gray-500 mb-1">Código PIX Copia e Cola</p>
                       <div className="flex bg-gray-50 border border-gray-200 rounded-md">
                         <div className="flex-grow p-2 text-xs font-mono overflow-auto whitespace-normal break-all max-h-20">
-                          {codigoPix}
+                          {codigoPixCopiaECola}
                         </div>
                         <button 
                           onClick={copyToClipboard} 

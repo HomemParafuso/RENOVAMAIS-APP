@@ -13,6 +13,7 @@ export interface Geradora {
   usuariosAtivos: number;
   dataCadastro: string;
   ultimoPagamento?: string;
+  senha?: string; // Senha para login local
 }
 
 export interface PlanoCobranca {

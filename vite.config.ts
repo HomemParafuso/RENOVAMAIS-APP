@@ -17,6 +17,28 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "cloudflare:sockets": path.resolve(__dirname, "./src/lib/cloudflare-sockets-fallback.js"),
+      "events": path.resolve(__dirname, "./src/lib/events-polyfill.js"),
+      "buffer": path.resolve(__dirname, "./src/lib/buffer-polyfill.js"),
+      "crypto": path.resolve(__dirname, "./src/lib/crypto-polyfill.js"),
+      "util": path.resolve(__dirname, "./src/lib/util-polyfill.js"),
     },
+  },
+  optimizeDeps: {
+    esbuildOptions: {
+      define: {
+        global: 'globalThis',
+        'process.env': JSON.stringify({}),
+        'process.browser': 'true',
+        'process.version': '"v16.0.0"',
+        'process.platform': '"browser"',
+      },
+    },
+  },
+  define: {
+    'process.env': {},
+    'process.browser': true,
+    'process.version': '"v16.0.0"',
+    'process.platform': '"browser"',
   },
 }));

@@ -27,7 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, MoreVertical, Edit, Trash2, Download, Plus, FileText, Calendar, BarChart2, DollarSign } from "lucide-react";
+import { Search, MoreVertical, Edit, Trash2, Download, Plus, FileText, Calendar, BarChart2, DollarSign, RefreshCcw } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -85,14 +85,15 @@ interface Despesa {
 }
 
 interface Receita {
-  id: number;
+  id: number; // Id da fatura (recebimento)
   cliente: string;
-  descricao: string;
-  valor: number;
-  dataPagamento?: string;
+  referencia: string; // Corresponde à fatura.referencia
+  valor: string; // Corresponde à fatura.valor (manter como string para consistência com Fatura)
+  dataPagamento?: string; // Data de pagamento (se houver)
   dataVencimento: string;
-  fatura: string;
-  status: "pago" | "pendente" | "atrasado";
+  status: "Pago" | "Pendente" | "Atrasado" | "Estornada"; // Alinhar com os status de Fatura
+  notificado?: boolean; // Adicionar para compatibilidade com Fatura, se necessário
+  // ... quaisquer outros campos relevantes da fatura que você queira exibir como receita
 }
 
 const categoriasDespesas = [
@@ -105,28 +106,6 @@ const categoriasDespesas = [
   "Marketing",
   "Administrativo",
   "Outros",
-];
-
-const receitasData: Receita[] = [
-  {
-    id: 1,
-    cliente: "Pablio Tacyanno",
-    descricao: "Fatura de energia - Maio/2025",
-    valor: 150.00,
-    dataVencimento: "10/05/2025",
-    fatura: "FAT-0001",
-    status: "pendente",
-  },
-  {
-    id: 2,
-    cliente: "Maria Empreendimentos",
-    descricao: "Fatura de energia - Maio/2025",
-    valor: 380.50,
-    dataPagamento: "03/05/2025",
-    dataVencimento: "05/05/2025",
-    fatura: "FAT-0002",
-    status: "pago",
-  },
 ];
 
 const despesasData: Despesa[] = [
@@ -184,13 +163,17 @@ const FinanceiroPage = () => {
   const [tabAtiva, setTabAtiva] = useState<"despesas" | "receitas" | "resumo">("resumo");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [despesas, setDespesas] = useState<Despesa[]>(despesasData);
-  const [receitas, setReceitas] = useState<Receita[]>(receitasData);
+  const [receitas, setReceitas] = useState<Receita[]>([]);
   const [usinas, setUsinas] = useState<any[]>([]);
   const [filtroCategoria, setFiltroCategoria] = useState<string>("todas");
   const [filtroStatus, setFiltroStatus] = useState<string>("todos");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   const { toast } = useToast();
+
+  // New states for estorno de recebimento
+  const [isEstornarRecebimentoModalOpen, setIsEstornarRecebimentoModalOpen] = useState(false);
+  const [receitaAtual, setReceitaAtual] = useState<Receita | undefined>(undefined);
 
   // Formulário para nova despesa
   const form = useForm<z.infer<typeof despesaSchema>>({
@@ -209,7 +192,16 @@ const FinanceiroPage = () => {
   // Buscar usinas cadastradas
   useEffect(() => {
     try {
-      // Em um cenário real, isso seria uma chamada API
+      // Carregar receitas (faturas pagas) do localStorage
+      const faturasArmazenadas = localStorage.getItem('faturas');
+      if (faturasArmazenadas) {
+        const todasFaturas: Receita[] = JSON.parse(faturasArmazenadas);
+        // Filtra apenas as faturas com status 'Pago' para serem consideradas receitas
+        const faturasPagas = todasFaturas.filter(fatura => fatura.status === "Pago");
+        setReceitas(faturasPagas);
+      }
+
+      // Carregar usinas cadastradas
       const geradorasArmazenadas = localStorage.getItem('geradoras');
       if (geradorasArmazenadas) {
         setUsinas(JSON.parse(geradorasArmazenadas));
@@ -223,7 +215,12 @@ const FinanceiroPage = () => {
         }]);
       }
     } catch (error) {
-      console.error("Erro ao carregar geradoras:", error);
+      console.error("Erro ao carregar dados:", error);
+      toast({
+        title: "Erro ao carregar dados",
+        description: "Não foi possível carregar as informações financeiras. Tente novamente mais tarde.",
+        variant: "destructive"
+      });
     }
   }, []);
 
@@ -251,7 +248,7 @@ const FinanceiroPage = () => {
 
   // Total de despesas e receitas
   const totalDespesas = despesas.reduce((sum, d) => sum + d.valor, 0);
-  const totalReceitas = receitas.reduce((sum, r) => sum + r.valor, 0);
+  const totalReceitas = receitas.reduce((sum, r) => sum + parseFloat(r.valor), 0);
   
   // Despesas por categoria para mostrar no card
   const despesasPorCategoria: Record<string, number> = {};
@@ -274,9 +271,9 @@ const FinanceiroPage = () => {
     
     // Mapear receitas por mês
     receitas.forEach(r => {
-      if (r.status === "pago" && r.dataPagamento) {
+      if (r.status === "Pago" && r.dataPagamento) {
         const mes = r.dataPagamento.substring(3); // MM/YYYY
-        receitasMap.set(mes, (receitasMap.get(mes) || 0) + r.valor);
+        receitasMap.set(mes, (receitasMap.get(mes) || 0) + parseFloat(r.valor));
       }
     });
     
@@ -363,6 +360,43 @@ const FinanceiroPage = () => {
     });
   };
 
+  // Função para lidar com o estorno de recebimento
+  const handleEstornarRecebimento = (receita: Receita) => {
+    setReceitaAtual(receita);
+    setIsEstornarRecebimentoModalOpen(true);
+  };
+
+  // Função para confirmar o estorno de recebimento
+  const confirmarEstornoRecebimento = () => {
+    if (!receitaAtual) return;
+
+    // Obter todas as faturas do localStorage (elas representam os recebimentos)
+    const faturasArmazenadas = localStorage.getItem('faturas');
+    let todasFaturas: Receita[] = faturasArmazenadas ? JSON.parse(faturasArmazenadas) : [];
+
+    // Atualizar o status da fatura específica para "Estornada"
+    const faturasAtualizadas = todasFaturas.map(fatura =>
+      fatura.id === receitaAtual.id
+        ? { ...fatura, status: "Estornada" }
+        : fatura
+    );
+
+    // Salvar as faturas atualizadas de volta no localStorage
+    localStorage.setItem('faturas', JSON.stringify(faturasAtualizadas));
+
+    // Atualizar o estado 'receitas' em FinanceiroPage re-filtrando as faturas pagas
+    const novasReceitas = faturasAtualizadas.filter(fatura => fatura.status === "Pago");
+    setReceitas(novasReceitas);
+
+    toast({
+      title: "Pagamento estornado",
+      description: `O pagamento da fatura ${receitaAtual.referencia} foi estornado com sucesso.`,
+    });
+
+    setIsEstornarRecebimentoModalOpen(false);
+    setReceitaAtual(undefined);
+  };
+
   return (
     <div className="p-8">
       <div className="flex justify-between items-center mb-6">
@@ -384,7 +418,7 @@ const FinanceiroPage = () => {
               <div className="text-2xl font-bold">R$ {totalReceitas.toFixed(2)}</div>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {receitas.filter(r => r.status === "pago").length} faturas pagas
+              {receitas.filter(r => r.status === "Pago").length} faturas pagas
             </p>
           </CardContent>
         </Card>
@@ -487,7 +521,7 @@ const FinanceiroPage = () => {
             <Card className="p-4">
               <h4 className="font-medium text-sm text-gray-600 mb-2">Receitas do Mês</h4>
               <p className="text-2xl font-bold text-green-600">
-                R$ {receitas.filter(r => r.status === "pago").reduce((sum, r) => sum + r.valor, 0).toFixed(2)}
+                R$ {receitas.filter(r => r.status === "Pago").reduce((sum, r) => sum + parseFloat(r.valor), 0).toFixed(2)}
               </p>
             </Card>
             <Card className="p-4">
@@ -499,7 +533,7 @@ const FinanceiroPage = () => {
             <Card className="p-4">
               <h4 className="font-medium text-sm text-gray-600 mb-2">Líquido do Mês</h4>
               <p className="text-2xl font-bold text-blue-600">
-                R$ {(receitas.filter(r => r.status === "pago").reduce((sum, r) => sum + r.valor, 0) - 
+                R$ {(receitas.filter(r => r.status === "Pago").reduce((sum, r) => sum + parseFloat(r.valor), 0) - 
                      despesas.filter(d => d.status === "pago").reduce((sum, d) => sum + d.valor, 0)).toFixed(2)}
               </p>
             </Card>
@@ -783,7 +817,7 @@ const FinanceiroPage = () => {
                       </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
+                          <DropdownMenuTrigger>
                             <Button variant="ghost" size="icon">
                               <MoreVertical className="h-5 w-5" />
                             </Button>
@@ -891,9 +925,9 @@ const FinanceiroPage = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todos">Todos os status</SelectItem>
-                  <SelectItem value="pago">Pago</SelectItem>
-                  <SelectItem value="pendente">Pendente</SelectItem>
-                  <SelectItem value="atrasado">Atrasado</SelectItem>
+                  <SelectItem value="Pago">Pago</SelectItem>
+                  <SelectItem value="Pendente">Pendente</SelectItem>
+                  <SelectItem value="Atrasado">Atrasado</SelectItem>
                 </SelectContent>
               </Select>
               
@@ -922,6 +956,7 @@ const FinanceiroPage = () => {
                   <TableHead>Pagamento</TableHead>
                   <TableHead className="text-right">Valor</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -929,20 +964,40 @@ const FinanceiroPage = () => {
                   <TableRow key={receita.id}>
                     <TableCell className="font-medium">{receita.cliente}</TableCell>
                     <TableCell>{receita.descricao}</TableCell>
-                    <TableCell>{receita.fatura}</TableCell>
+                    <TableCell>{receita.referencia}</TableCell>
                     <TableCell>{receita.dataVencimento}</TableCell>
                     <TableCell>{receita.dataPagamento || "-"}</TableCell>
-                    <TableCell className="text-right">R$ {receita.valor.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">R$ {receita.valor}</TableCell>
                     <TableCell>
                       <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                        ${receita.status === 'pago' ? 'bg-green-100 text-green-800' : ''}
-                        ${receita.status === 'pendente' ? 'bg-yellow-100 text-yellow-800' : ''}
-                        ${receita.status === 'atrasado' ? 'bg-red-100 text-red-800' : ''}
+                        ${receita.status === 'Pago' ? 'bg-green-100 text-green-800' : ''}
+                        ${receita.status === 'Pendente' ? 'bg-yellow-100 text-yellow-800' : ''}
+                        ${receita.status === 'Atrasado' ? 'bg-red-100 text-red-800' : ''}
                       `}>
-                        {receita.status === 'pago' && 'Pago'}
-                        {receita.status === 'pendente' && 'Pendente'}
-                        {receita.status === 'atrasado' && 'Atrasado'}
+                        {receita.status === 'Pago' && 'Pago'}
+                        {receita.status === 'Pendente' && 'Pendente'}
+                        {receita.status === 'Atrasado' && 'Atrasado'}
                       </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger>
+                          <Button variant="ghost" size="icon">
+                            <MoreVertical className="h-5 w-5" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {receita.status === 'Pago' && (
+                            <DropdownMenuItem 
+                              onClick={() => handleEstornarRecebimento(receita)}
+                              className="text-orange-600 hover:text-orange-700 focus:text-orange-700"
+                            >
+                              <RefreshCcw className="h-4 w-4 mr-2" />
+                              Estornar Pagamento
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -951,6 +1006,51 @@ const FinanceiroPage = () => {
           </div>
         </>
       )}
+
+      {/* Modal de confirmação de estorno de recebimento */}
+      <Dialog open={isEstornarRecebimentoModalOpen} onOpenChange={setIsEstornarRecebimentoModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Confirmar estorno de recebimento</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja estornar este recebimento? Esta ação alterará o balanço financeiro da empresa e a devolução ao cliente deverá ser processada manualmente pelo sistema bancário.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {receitaAtual && (
+            <div className="py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Cliente</p>
+                  <p className="text-sm">{receitaAtual.cliente}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Referência</p>
+                  <p className="text-sm">{receitaAtual.referencia}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Vencimento</p>
+                  <p className="text-sm">{receitaAtual.dataVencimento}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Valor</p>
+                  <p className="text-sm">{receitaAtual.valor}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEstornarRecebimentoModalOpen(false)}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={confirmarEstornoRecebimento}>
+              <RefreshCcw className="h-4 w-4 mr-2" />
+              Estornar Pagamento
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

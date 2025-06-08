@@ -1,5 +1,7 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { clienteService } from "@/services/clienteService";
+import { usinaService } from "@/services/usinaService";
+import { UsinaGeradora } from "@/portal-admin/types/usinaGeradora";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -34,9 +36,40 @@ const NovoClienteModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
   const [valorFixo, setValorFixo] = useState("");
   const [valorPercentual, setValorPercentual] = useState("");
   const [activeTab, setActiveTab] = useState("informacoes");
+  const [usinas, setUsinas] = useState<UsinaGeradora[]>([]);
+  const [selectedUsinaId, setSelectedUsinaId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  
+  // Obter o ID da geradora do usuário logado (simulado por enquanto)
+  const geradoraId = "geradora-123"; // Substituir pelo ID real da geradora logada
+  
+  // Carregar usinas da geradora
+  useEffect(() => {
+    const carregarUsinas = async () => {
+      setLoading(true);
+      try {
+        const usinasData = await usinaService.getUsinasByGeradoraId(geradoraId);
+        setUsinas(usinasData);
+        if (usinasData.length > 0) {
+          setSelectedUsinaId(usinasData[0].id);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar usinas:", error);
+        toast({
+          title: "Erro ao carregar usinas",
+          description: "Não foi possível carregar a lista de usinas. Tente novamente mais tarde.",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    carregarUsinas();
+  }, []);
 
-  const handleSalvar = () => {
+  const handleSalvar = async () => {
     // Validação obrigatória dos campos pessoais
     if (!nome.trim() || !email.trim() || !cpfCnpj.trim() || !telefone.trim()) {
       toast({
@@ -47,34 +80,58 @@ const NovoClienteModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
       return;
     }
 
-    // Criar objeto do cliente
-    const novoCliente = {
-      id: Date.now(), // ID temporário baseado em timestamp
-      nome: nome.trim(),
-      email: email.trim(),
-      cpf: cpfCnpj.trim(),
-      telefone: telefone.trim(),
-      tipoCalculo: tipoCalculo === "percentual" ? "Percentual de Economia" : "Valor Fixo",
-      percentualEconomia: tipoCalculo === "percentual" ? parseFloat(percentualEconomia) || 0 : 0,
-      fonteTarifa,
-      tusd: fonteTarifa === "customizada" ? parseFloat(tusd) || 0 : 0,
-      te: fonteTarifa === "customizada" ? parseFloat(te) || 0 : 0,
-      tipoIluminacao,
-      valorIluminacaoFixo: tipoIluminacao === "fixo" ? parseFloat(valorFixo) || 0 : 0,
-      valorIluminacaoPercentual: tipoIluminacao === "percentual" ? parseFloat(valorPercentual) || 0 : 0,
-      status: "Ativo",
-      usina: "Usina Solar São Paulo I", // Valor padrão
-      dataAdesao: new Date().toLocaleDateString('pt-BR'),
-      dataCriacao: new Date().toISOString()
-    };
+      // Criar objeto do cliente
+      const novoCliente = {
+        id: Date.now(), // ID temporário baseado em timestamp
+        nome: nome.trim(),
+        email: email.trim(),
+        cpf: cpfCnpj.trim(),
+        telefone: telefone.trim(),
+        tipoCalculo: tipoCalculo === "percentual" ? "Percentual de Economia" : "Valor Fixo",
+        percentualEconomia: tipoCalculo === "percentual" ? parseFloat(percentualEconomia) || 0 : 0,
+        fonteTarifa,
+        tusd: fonteTarifa === "customizada" ? parseFloat(tusd) || 0 : 0,
+        te: fonteTarifa === "customizada" ? parseFloat(te) || 0 : 0,
+        tipoIluminacao,
+        valorIluminacaoFixo: tipoIluminacao === "fixo" ? parseFloat(valorFixo) || 0 : 0,
+        valorIluminacaoPercentual: tipoIluminacao === "percentual" ? parseFloat(valorPercentual) || 0 : 0,
+        status: "ativo",
+        usina: "", // Não mostrar usina até que seja vinculado
+        usinaId: null, // Inicialmente não vinculado a nenhuma usina
+        dataAdesao: new Date().toLocaleDateString('pt-BR'),
+        dataCriacao: new Date().toISOString()
+      };
 
-    // Salvar no localStorage
-    const clientesExistentes = JSON.parse(localStorage.getItem('clientes') || '[]');
-    const clientesAtualizados = [...clientesExistentes, novoCliente];
-    localStorage.setItem('clientes', JSON.stringify(clientesAtualizados));
+    try {
+      // Salvar no Firebase através do serviço
+      const clienteSalvo = await clienteService.create({
+        nome: nome.trim(),
+        email: email.trim(),
+        cpfCnpj: cpfCnpj.trim(),
+        telefone: telefone.trim(),
+        endereco: "",
+        cidade: "",
+        estado: "",
+        cep: "",
+        status: "ativo",
+        geradoraId: geradoraId,
+        usinaId: null, // Inicialmente não vinculado a nenhuma usina
+        dataCadastro: new Date().toISOString(),
+        consumoMedio: 0,
+        valorMedio: 0,
+        observacoes: ""
+      });
 
-    console.log('Cliente salvo:', novoCliente);
-    console.log('Clientes no localStorage:', clientesAtualizados);
+      console.log('Cliente salvo no Firebase:', clienteSalvo);
+    } catch (error) {
+      console.error('Erro ao salvar cliente:', error);
+      toast({
+        title: "Erro ao salvar",
+        description: "Ocorreu um erro ao salvar o cliente. Tente novamente.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     // Limpar formulário
     setNome("");
@@ -172,6 +229,8 @@ const NovoClienteModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
                 />
               </div>
             </div>
+            
+            {/* Removido o seletor de usina do cadastro inicial */}
 
             <div className="border-t pt-4 mt-6">
               <h4 className="font-medium mb-3">Configuração de Cálculo</h4>

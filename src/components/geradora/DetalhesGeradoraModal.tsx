@@ -1,185 +1,209 @@
-
-import React, { useEffect, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
+import React from "react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogClose,
+  DialogFooter,
 } from "@/components/ui/dialog";
-import { MapPin } from "lucide-react";
-import 'ol/ol.css';
-import Map from 'ol/Map';
-import View from 'ol/View';
-import TileLayer from 'ol/layer/Tile';
-import OSM from 'ol/source/OSM';
-import { fromLonLat } from 'ol/proj';
-import Feature from 'ol/Feature';
-import Point from 'ol/geom/Point';
-import { Vector as VectorLayer } from 'ol/layer';
-import { Vector as VectorSource } from 'ol/source';
-import { Style, Icon } from 'ol/style';
-import { defaults as defaultControls } from 'ol/control';
+import { Button } from "@/components/ui/button";
+import { MapPin, Mail, Phone, User, Building, Calendar, CreditCard, Users } from "lucide-react";
+import { Geradora } from '@/portal-admin/types';
+import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
-interface Geradora {
-  id: number;
-  nome: string;
-  potencia: string;
-  localizacao: string;
-  status: string;
-  clientesVinculados: number;
+// Interface para os dados adicionais que podem ser passados para o modal
+interface GeradoraDetalhesAdicionais {
   latitude?: number;
   longitude?: number;
 }
 
-const DetalhesGeradoraModal = ({ 
-  isOpen, 
-  onClose, 
-  geradora 
-}: { 
-  isOpen: boolean; 
+const DetalhesGeradoraModal = ({
+  isOpen,
+  onClose,
+  geradora,
+}: {
+  isOpen: boolean;
   onClose: () => void;
   geradora?: Geradora;
+  detalhesAdicionais?: GeradoraDetalhesAdicionais;
 }) => {
-  const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<Map | null>(null);
-  
-  useEffect(() => {
-    if (!geradora || !isOpen || !mapRef.current) return;
-    
-    // Default coordinates if none provided - usando coordenadas para o Brasil se não houver específicas
-    const lat = geradora.latitude || -8.287221;
-    const lng = geradora.longitude || -35.971575;
-    
-    // Convert to OpenLayers projection
-    const position = fromLonLat([lng, lat]);
-    
-    // Create vector layer for marker
-    const iconFeature = new Feature({
-      geometry: new Point(position)
-    });
-    
-    const vectorSource = new VectorSource({
-      features: [iconFeature]
-    });
-    
-    const vectorLayer = new VectorLayer({
-      source: vectorSource,
-      style: new Style({
-        image: new Icon({
-          anchor: [0.5, 1],
-          src: 'https://openlayers.org/en/latest/examples/data/icon.png'
-        })
-      })
-    });
-    
-    // Initialize map with OSM layer similar to the reference image
-    const map = new Map({
-      target: mapRef.current,
-      layers: [
-        new TileLayer({
-          source: new OSM({
-            attributions: ['© Colaboradores do OpenStreetMap'],
-          })
-        }),
-        vectorLayer
-      ],
-      view: new View({
-        center: position,
-        zoom: 14,
-        minZoom: 2,
-        maxZoom: 19
-      }),
-      controls: defaultControls({
-        zoom: true,
-        attribution: true,
-        rotate: false
-      })
-    });
-    
-    mapInstanceRef.current = map;
-    
-    // Clean up on unmount
-    return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.setTarget(undefined);
-        mapInstanceRef.current = null;
-      }
-    };
-  }, [geradora, isOpen]);
-  
+
+  // Formatar data
+  const formatarData = (dataString?: string) => {
+    if (!dataString) return "Data não informada";
+    try {
+      return format(new Date(dataString), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+    } catch (error) {
+      return dataString;
+    }
+  };
+
+  // Renderizar badge de status
+  const renderizarStatus = (status: string) => {
+    switch (status) {
+      case 'ativo':
+        return <Badge className="bg-green-500">Ativo</Badge>;
+      case 'bloqueado':
+        return <Badge variant="destructive">Bloqueado</Badge>;
+      case 'pendente':
+        return <Badge variant="outline">Pendente</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[700px]">
         <DialogHeader>
           <DialogTitle>Detalhes da Geradora</DialogTitle>
         </DialogHeader>
-        
+
         {geradora ? (
-          <div className="space-y-4 mt-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Nome</p>
-                <p className="text-base">{geradora.nome}</p>
+          <div className="space-y-6 mt-4">
+            {/* Cabeçalho com nome e status */}
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <Building className="h-6 w-6 text-primary" />
+                <h2 className="text-xl font-bold">{geradora.nome}</h2>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-500">Potência</p>
-                <p className="text-base">{geradora.potencia}</p>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Localização</p>
-                <p className="text-base">{geradora.localizacao}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-500">Status</p>
-                <p className="text-base">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    {geradora.status}
-                  </span>
-                </p>
+                {renderizarStatus(geradora.status)}
               </div>
             </div>
-            
-            <div className="mb-4">
-              <p className="text-sm font-medium text-gray-500 mb-2">Clientes Vinculados</p>
-              <p className="text-base">{geradora.clientesVinculados}</p>
-            </div>
-            
-            <div>
-              <p className="text-sm font-medium text-gray-500 mb-2">Localização no Mapa</p>
-              <div className="h-[300px] bg-gray-100 rounded-lg relative" ref={mapRef}>
-                {!mapInstanceRef.current && (
-                  <div className="h-full flex items-center justify-center">
-                    <div className="flex flex-col items-center">
-                      <MapPin className="h-8 w-8 text-green-600 mb-2" />
-                      <p className="text-gray-500">
-                        {geradora.localizacao || "Localização não informada"}
-                      </p>
+
+            {/* Informações principais */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Coluna 1: Dados da geradora */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold border-b pb-2">Dados da Geradora</h3>
+
+                <div className="space-y-3">
+                  <div className="flex items-start gap-2">
+                    <Mail className="h-5 w-5 text-gray-500 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Email</p>
+                      <p className="text-base">{geradora.email}</p>
                     </div>
                   </div>
-                )}
-                <div className="absolute bottom-1 right-1 text-xs text-gray-600">
-                  © Colaboradores do OpenStreetMap
+
+                  <div className="flex items-start gap-2">
+                    <CreditCard className="h-5 w-5 text-gray-500 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">CNPJ</p>
+                      <p className="text-base">{geradora.cnpj || "Não informado"}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-2">
+                    <MapPin className="h-5 w-5 text-gray-500 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Endereço</p>
+                      <p className="text-base">{geradora.endereco || "Não informado"}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-2">
+                    <Calendar className="h-5 w-5 text-gray-500 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Data de Cadastro</p>
+                      <p className="text-base">{formatarData(geradora.dataCadastro)}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-2">
+                    <Users className="h-5 w-5 text-gray-500 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Usuários Ativos</p>
+                      <p className="text-base">{geradora.usuariosAtivos} de {geradora.limiteUsuarios}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Coluna 2: Dados do Responsável e Plano de Cobrança */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold border-b pb-2">Dados do Responsável</h3>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-2">
+                    <User className="h-5 w-5 text-gray-500 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Nome</p>
+                      <p className="text-base">{geradora.responsavel || "Não informado"}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Phone className="h-5 w-5 text-gray-500 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Telefone</p>
+                      <p className="text-base">{geradora.telefone || "Não informado"}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <h3 className="text-lg font-semibold border-b pb-2 mt-6">Plano de Cobrança</h3>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-2">
+                    <CreditCard className="h-5 w-5 text-gray-500 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Tipo de Plano</p>
+                      <p className="text-base">{geradora.planoCobranca?.tipo || "Não informado"}</p>
+                    </div>
+                  </div>
+                  {geradora.planoCobranca?.percentual && (
+                    <div className="flex items-start gap-2">
+                      <CreditCard className="h-5 w-5 text-gray-500 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Percentual</p>
+                        <p className="text-base">{geradora.planoCobranca.percentual}%</p>
+                      </div>
+                    </div>
+                  )}
+                  {geradora.planoCobranca?.valorFixo && (
+                    <div className="flex items-start gap-2">
+                      <CreditCard className="h-5 w-5 text-gray-500 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Valor Fixo</p>
+                        <p className="text-base">R$ {geradora.planoCobranca.valorFixo.toFixed(2)}</p>
+                      </div>
+                    </div>
+                  )}
+                  {geradora.planoCobranca?.valorPorUsuario && (
+                    <div className="flex items-start gap-2">
+                      <CreditCard className="h-5 w-5 text-gray-500 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Valor por Usuário</p>
+                        <p className="text-base">R$ {geradora.planoCobranca.valorPorUsuario.toFixed(2)}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
+
+            {/* Antigo espaço do mapa - agora apenas texto do endereço */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold border-b pb-2">Localização</h3>
+              <p className="text-base">{geradora.endereco || "Endereço não informado."}</p>
+            </div>
           </div>
         ) : (
-          <p>Nenhuma informação disponível para esta geradora.</p>
+          <p className="text-center py-8 text-gray-500">Nenhum detalhe de geradora disponível.</p>
         )}
-        
-        <div className="flex justify-end gap-3 mt-6">
+
+        <DialogFooter>
           <DialogClose asChild>
-            <Button variant="outline">Fechar</Button>
+            <Button type="button" variant="secondary">
+              Fechar
+            </Button>
           </DialogClose>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 };
 
-export default DetalhesGeradoraModal;
+export default DetalhesGeradoraModal; 

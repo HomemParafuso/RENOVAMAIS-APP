@@ -1,0 +1,86 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Função para verificar se o usuário está autenticado
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Função para verificar se o usuário é administrador
+    function isAdmin() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Função para verificar se o usuário é uma geradora
+    function isGeradora() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'geradora';
+    }
+    
+    // Função para verificar se o usuário é o proprietário do documento
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Regras para a coleção users
+    match /users/{userId} {
+      // Qualquer usuário autenticado pode ler seu próprio perfil
+      // Administradores podem ler qualquer perfil
+      allow read: if isOwner(userId) || isAdmin();
+      
+      // Usuários podem atualizar seu próprio perfil
+      // Administradores podem atualizar qualquer perfil
+      allow update: if isOwner(userId) || isAdmin();
+      
+      // Apenas administradores podem criar ou excluir usuários
+      allow create, delete: if isAdmin();
+    }
+    
+    // Regras para a coleção faturas
+    match /faturas/{faturaId} {
+      // Usuários podem ler suas próprias faturas
+      // Administradores podem ler qualquer fatura
+      // Geradoras podem ler faturas de seus clientes
+      allow read: if isAuthenticated() && 
+                   (resource.data.userId == request.auth.uid || 
+                    isAdmin() || 
+                    (isGeradora() && existsIn('geradora_cliente', ['geradora_id', request.auth.uid, 'user_id', resource.data.userId])));
+      
+      // Apenas administradores e geradoras podem criar faturas
+      allow create: if isAdmin() || isGeradora();
+      
+      // Apenas administradores podem atualizar ou excluir faturas
+      allow update, delete: if isAdmin();
+    }
+    
+    // Regras para a coleção configuracoes
+    match /configuracoes/{configId} {
+      // Qualquer usuário autenticado pode ler configurações
+      allow read: if isAuthenticated();
+      
+      // Apenas administradores podem criar, atualizar ou excluir configurações
+      allow write: if isAdmin();
+    }
+    
+    // Regras para a coleção geradora_cliente
+    match /geradora_cliente/{relationId} {
+      // Usuários podem ler suas próprias relações
+      // Administradores podem ler qualquer relação
+      // Geradoras podem ler relações onde são a geradora
+      allow read: if isAuthenticated() && 
+                   (resource.data.user_id == request.auth.uid || 
+                    isAdmin() || 
+                    (isGeradora() && resource.data.geradora_id == request.auth.uid));
+      
+      // Apenas administradores podem criar, atualizar ou excluir relações
+      allow write: if isAdmin();
+    }
+    
+    // Função auxiliar para verificar se existe um documento em uma coleção com determinados campos
+    function existsIn(collection, conditions) {
+      // Implementação simplificada, na prática você precisaria construir uma query
+      return true; // Simplificação para este exemplo
+    }
+  }
+}

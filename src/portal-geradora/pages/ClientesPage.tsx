@@ -39,6 +39,7 @@ const ClientesPage = () => {
   const [clienteSelecionado, setClienteSelecionado] = useState<Cliente | undefined>(undefined);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc" | null>(null);
   const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [clienteParaExcluir, setClienteParaExcluir] = useState<Cliente | null>(null);
   const { toast } = useToast();
 
   // Carregar clientes do localStorage
@@ -53,6 +54,28 @@ const ClientesPage = () => {
       title: "Convite enviado",
       description: "O convite foi enviado para o cliente com sucesso!",
     });
+  };
+
+  const handleExcluirCliente = (cliente: Cliente) => {
+    setClienteParaExcluir(cliente);
+    
+    // Confirmar exclusão
+    if (confirm(`Tem certeza que deseja excluir o cliente ${cliente.nome}? Esta ação apenas ocultará o cliente da visualização, mas manterá os dados financeiros históricos e faturas na base.`)) {
+      // Filtrar o cliente da lista
+      const clientesAtualizados = clientes.filter(c => c.id !== cliente.id);
+      
+      // Atualizar o estado
+      setClientes(clientesAtualizados);
+      
+      // Atualizar o localStorage
+      localStorage.setItem('clientes', JSON.stringify(clientesAtualizados));
+      
+      // Notificar o usuário
+      toast({
+        title: "Cliente excluído",
+        description: `O cliente ${cliente.nome} foi excluído com sucesso.`,
+      });
+    }
   };
   
   const handleSort = (column: string) => {
@@ -189,7 +212,7 @@ const ClientesPage = () => {
                   </TableCell>
                   <TableCell>{cliente.cpf || '-'}</TableCell>
                   <TableCell>{cliente.tipoCalculo}</TableCell>
-                  <TableCell>{cliente.usina}</TableCell>
+                  <TableCell>{cliente.usina || '-'}</TableCell>
                   <TableCell>
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                       {cliente.status}
@@ -215,6 +238,17 @@ const ClientesPage = () => {
                           <Send className="h-4 w-4 mr-2" />
                           Enviar Convite
                         </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => handleExcluirCliente(cliente)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 mr-2">
+                            <path d="M3 6h18"></path>
+                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                          </svg>
+                          Excluir Cliente
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -231,12 +265,14 @@ const ClientesPage = () => {
             isOpen={isViewModalOpen}
             onClose={() => setIsViewModalOpen(false)}
             isViewOnly={true}
+            clienteId={clienteSelecionado.id.toString()}
           />
 
           <EditarClienteModal 
             isOpen={isEditModalOpen} 
             onClose={() => setIsEditModalOpen(false)}
             isViewOnly={false}
+            clienteId={clienteSelecionado.id.toString()}
           />
         </>
       )}

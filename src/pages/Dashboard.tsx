@@ -8,6 +8,7 @@ import { toast } from "@/hooks/use-toast";
 import NovaFaturaModal from "@/components/fatura/NovaFaturaModal";
 import { useAuth } from '@/context/AuthContext';
 import { useInvoice } from '@/context/InvoiceContext';
+import { useGeradora } from '@/context/GeradoraContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { InvoiceList } from '@/components/invoices/InvoiceList';
 import { NotificationList } from '@/components/notifications/NotificationList';
@@ -71,10 +72,9 @@ const Dashboard = () => {
     geracaoTotal: "0 kWh",
     receitaMensal: []
   });
-  const [clientesSemFaturas, setClientesSemFaturas] = useState<any[]>([]);
-  const [clientesBaixados, setClientesBaixados] = useState<string[]>([]);
   const { user } = useAuth();
   const { invoices, loading: invoicesLoading } = useInvoice();
+  const { geradoras, loading: geradorasLoading } = useGeradora();
 
   const totalAmount = invoices.reduce((sum, invoice) => sum + invoice.amount, 0);
   const pendingInvoices = invoices.filter((invoice) => invoice.status === 'pending');
@@ -84,10 +84,6 @@ const Dashboard = () => {
   useEffect(() => {
     const carregarDadosReais = () => {
       try {
-        // Carregar clientes
-        const clientesArmazenados = localStorage.getItem('clientes');
-        const clientes = clientesArmazenados ? JSON.parse(clientesArmazenados) : [];
-        
         // Carregar faturas
         const faturasArmazenadas = localStorage.getItem('faturas');
         const faturas = faturasArmazenadas ? JSON.parse(faturasArmazenadas) : [];
@@ -96,34 +92,8 @@ const Dashboard = () => {
         const receitasArmazenadas = localStorage.getItem('receitas');
         const receitas = receitasArmazenadas ? JSON.parse(receitasArmazenadas) : [];
         
-        // Carregar clientes baixados manualmente
-        const clientesBaixadosArmazenados = localStorage.getItem('clientesBaixados');
-        const clientesBaixadosData = clientesBaixadosArmazenados ? JSON.parse(clientesBaixadosArmazenados) : [];
-        setClientesBaixados(clientesBaixadosData);
-        
-        // Identificar clientes sem faturas no mês atual
-        const mesAtual = new Date().getMonth();
-        const anoAtual = new Date().getFullYear();
-        
-        const clientesSemFaturasMes = clientes.filter((cliente: any) => {
-          if (cliente.status !== 'ativo') return false;
-          if (clientesBaixadosData.includes(cliente.id)) return false;
-          
-          // Verificar se tem fatura no mês atual
-          const temFaturaMes = faturas.some((fatura: any) => {
-            const dataFatura = new Date(fatura.dataEmissao);
-            return fatura.clienteId === cliente.id && 
-                   dataFatura.getMonth() === mesAtual && 
-                   dataFatura.getFullYear() === anoAtual;
-          });
-          
-          return !temFaturaMes;
-        });
-        
-        setClientesSemFaturas(clientesSemFaturasMes);
-        
         // Calcular métricas
-        const clientesAtivos = clientes.filter((c: any) => c.status === 'ativo').length;
+        const clientesAtivos = geradoras.filter(g => g.status === 'ativo').length;
         const faturasPendentes = faturas.filter((f: any) => f.status === 'pendente').length;
         const faturasAtrasadas = faturas.filter((f: any) => {
           const vencimento = new Date(f.dataVencimento);
@@ -165,10 +135,10 @@ const Dashboard = () => {
         console.error('Erro ao carregar dados:', error);
         // Usar dados padrão em caso de erro
         setDadosConectados({
-          clientesAtivos: 1,
-          faturasPendentes: 1,
+          clientesAtivos: 0,
+          faturasPendentes: 0,
           faturasAtrasadas: 0,
-          geracaoTotal: "1.280 kWh",
+          geracaoTotal: "0 kWh",
           receitaMensal: [
             { name: 'Dez', receita: 0 },
             { name: 'Jan', receita: 0 },
@@ -181,8 +151,10 @@ const Dashboard = () => {
       }
     };
 
-    carregarDadosReais();
-  }, [activeTimeFrame, clientesBaixados]);
+    if (!geradorasLoading) {
+      carregarDadosReais();
+    }
+  }, [activeTimeFrame, geradoras, geradorasLoading]);
 
   // Dados para o gráfico de pizza
   const economyData = [
@@ -245,27 +217,6 @@ const Dashboard = () => {
       variant: "default"
     });
     navigate(`/clientes`);
-  };
-
-  const handleBaixarCliente = (clienteId: string) => {
-    const novosClientesBaixados = [...clientesBaixados, clienteId];
-    setClientesBaixados(novosClientesBaixados);
-    localStorage.setItem('clientesBaixados', JSON.stringify(novosClientesBaixados));
-    
-    toast({
-      title: "Cliente baixado",
-      description: "Cliente removido da lista de pendências",
-      variant: "default"
-    });
-  };
-
-  const handleExcluirPendencia = (clienteId: string) => {
-    handleBaixarCliente(clienteId);
-    toast({
-      title: "Pendência excluída",
-      description: "Cliente não aparecerá mais como pendente",
-      variant: "default"
-    });
   };
 
   const handleGerarFatura = (cliente: any) => {
@@ -429,7 +380,7 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="h-[300px] overflow-y-auto">
-                {clientesSemFaturas.length === 0 ? (
+                {geradoras.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-center">
                     <div className="flex justify-center mb-4">
                       <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
@@ -442,7 +393,7 @@ const Dashboard = () => {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {clientesSemFaturas.map((cliente) => (
+                    {geradoras.map((cliente) => (
                       <div key={cliente.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
                         <div className="flex-1">
                           <h4 className="font-medium text-sm">{cliente.nome}</h4>
@@ -461,19 +412,11 @@ const Dashboard = () => {
                           <Button 
                             size="sm" 
                             variant="outline"
-                            onClick={() => handleBaixarCliente(cliente.id)}
+                            onClick={() => handleGerarFatura(cliente)}
                             className="h-8 px-2"
                           >
-                            <Download className="h-3 w-3 mr-1" />
-                            Baixar
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => handleExcluirPendencia(cliente.id)}
-                            className="h-8 px-2 text-red-600 hover:text-red-700"
-                          >
-                            <X className="h-3 w-3" />
+                            <FileUp className="h-3 w-3 mr-1" />
+                            Gerar
                           </Button>
                         </div>
                       </div>

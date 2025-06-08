@@ -30,7 +30,7 @@ const AdminGeradoras = () => {
   const [modalNovaGeradoraAberto, setModalNovaGeradoraAberto] = useState(false);
   const [busca, setBusca] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [supabaseStatus, setSupabaseStatus] = useState<'online' | 'offline' | 'unknown'>(syncService.getStatus());
+  const [firebaseStatus, setFirebaseStatus] = useState<'online' | 'offline' | 'unknown'>(syncService.getStatus());
   const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
 
@@ -41,9 +41,9 @@ const AdminGeradoras = () => {
       const data = await geradoraService.getAll();
       setGeradoras(data);
       
-      // Atualizar status do Supabase
+      // Atualizar status do Firebase
       const isConnected = await syncService.checkConnection();
-      setSupabaseStatus(isConnected ? 'online' : 'offline');
+      setFirebaseStatus(isConnected ? 'online' : 'offline');
     } catch (error) {
       console.error('Erro ao carregar geradoras:', error);
       toast({
@@ -51,7 +51,7 @@ const AdminGeradoras = () => {
         description: 'Não foi possível carregar as geradoras. Tente novamente mais tarde.',
         variant: 'destructive'
       });
-      setSupabaseStatus('offline');
+      setFirebaseStatus('offline');
     } finally {
       setIsLoading(false);
     }
@@ -77,7 +77,7 @@ const AdminGeradoras = () => {
     setIsLoading(true);
     try {
       const isConnected = await syncService.checkConnection();
-      setSupabaseStatus(isConnected ? 'online' : 'offline');
+      setFirebaseStatus(isConnected ? 'online' : 'offline');
       
       if (isConnected) {
         const result = await syncService.syncPendingOperations();
@@ -98,8 +98,8 @@ const AdminGeradoras = () => {
         }
       } else {
         toast({
-          title: 'Supabase indisponível',
-          description: 'Não foi possível conectar ao Supabase. Tente novamente mais tarde.',
+          title: 'Firebase indisponível',
+          description: 'Não foi possível conectar ao Firebase. Tente novamente mais tarde.',
           variant: 'destructive'
         });
       }
@@ -171,15 +171,24 @@ const AdminGeradoras = () => {
     setModalNovaGeradoraAberto(true);
   };
   
-  const handleSalvarNovaGeradora = async (novaGeradora: Geradora) => {
+  const handleSalvarNovaGeradora = async (novaGeradora: Partial<Geradora> & { senha: string }) => {
     setIsLoading(true);
     try {
-      await geradoraService.create(novaGeradora);
-      await carregarGeradoras();
-      toast({
-        title: 'Geradora cadastrada',
-        description: 'A geradora foi cadastrada com sucesso!',
-      });
+      console.log("Iniciando cadastro de nova geradora:", novaGeradora.nome);
+      
+      // Criar a geradora no serviço (que vai criar o usuário com a senha)
+      const resultado = await geradoraService.create(novaGeradora as Omit<Geradora, 'id'> & { senha?: string });
+      
+      if (resultado) {
+        console.log("Geradora cadastrada com sucesso:", resultado.nome);
+        await carregarGeradoras();
+        toast({
+          title: 'Geradora cadastrada',
+          description: 'A geradora foi cadastrada com sucesso!',
+        });
+      } else {
+        throw new Error("Falha ao cadastrar geradora - resultado nulo");
+      }
     } catch (error) {
       console.error('Erro ao cadastrar geradora:', error);
       toast({
@@ -189,6 +198,27 @@ const AdminGeradoras = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const filteredGeradoras = geradoras.filter(geradora =>
+    geradora.nome.toLowerCase().includes(busca.toLowerCase()) ||
+    geradora.cnpj.toLowerCase().includes(busca.toLowerCase()) ||
+    geradora.email.toLowerCase().includes(busca.toLowerCase())
+  );
+
+  const getPaymentStatusBadge = (ultimoPagamento?: string) => {
+    if (!ultimoPagamento) {
+      return <Badge variant="secondary">Sem Histórico</Badge>;
+    }
+    const lastPaymentDate = new Date(ultimoPagamento);
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+    if (lastPaymentDate > oneMonthAgo) {
+      return <Badge className="bg-green-100 text-green-800">Em Dia</Badge>;
+    } else {
+      return <Badge className="bg-red-100 text-red-800">Atrasado</Badge>;
     }
   };
 
@@ -202,20 +232,20 @@ const AdminGeradoras = () => {
           </p>
           <div className="flex items-center mt-2">
             <div className={`h-3 w-3 rounded-full mr-2 ${
-              supabaseStatus === 'online' ? 'bg-green-500' : 
-              supabaseStatus === 'offline' ? 'bg-red-500' : 'bg-yellow-500'
+              firebaseStatus === 'online' ? 'bg-green-500' : 
+              firebaseStatus === 'offline' ? 'bg-red-500' : 'bg-yellow-500'
             }`}></div>
             <span className="text-sm text-muted-foreground">
-              Supabase: {supabaseStatus === 'online' ? 'Online' : 
-                        supabaseStatus === 'offline' ? 'Offline' : 'Desconhecido'}
+              Firebase: {firebaseStatus === 'online' ? 'Online' : 
+                        firebaseStatus === 'offline' ? 'Offline' : 'Desconhecido'}
             </span>
-            {supabaseStatus !== 'online' && (
+            {firebaseStatus !== 'online' && (
               <Button 
                 variant="ghost" 
                 size="sm" 
                 className="ml-2 h-7 px-2" 
                 onClick={handleSincronizar}
-                disabled={isLoading || supabaseStatus === 'unknown'}
+                disabled={isLoading || firebaseStatus === 'unknown'}
               >
                 Sincronizar
               </Button>
@@ -228,7 +258,7 @@ const AdminGeradoras = () => {
           </div>
         </div>
         <div className="flex items-center space-x-4">
-          <Input type="text" placeholder="Buscar geradora..." className="w-64" />
+          <Input type="text" placeholder="Buscar geradora..." className="w-64" value={busca} onChange={(e) => setBusca(e.target.value)} />
           <Button variant="outline" size="sm">
             <Search className="h-4 w-4 mr-2" />
             Buscar
@@ -239,114 +269,112 @@ const AdminGeradoras = () => {
           </Button>
           <Button onClick={handleAdicionarGeradora}>
             <Plus className="h-4 w-4 mr-2" />
-            Adicionar
+            Adicionar Geradora
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
-        {geradoras.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <Building2 className="h-12 w-12 mx-auto text-gray-300 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhuma geradora cadastrada</h3>
-              <p className="text-gray-500 mb-4">Adicione novas geradoras para começar a gerenciar.</p>
-              <Button onClick={handleAdicionarGeradora}>
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar Geradora
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          geradoras.map((geradora) => (
-            <Card key={geradora.id}>
-              <CardHeader>
-                <CardTitle className="flex justify-between items-center">
-                  <div className="flex items-center space-x-2">
-                    <Building2 className="h-5 w-5 text-gray-500" />
-                    <span>{geradora.nome}</span>
-                  </div>
-                  <div>
-                    {geradora.status === 'ativo' && (
-                      <Badge variant="secondary">Ativo</Badge>
-                    )}
-                    {geradora.status === 'pendente' && (
-                      <Badge variant="outline">Pendente</Badge>
-                    )}
-                    {geradora.status === 'bloqueado' && (
-                      <Badge variant="destructive">Bloqueado</Badge>
-                    )}
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {/* Removido o resumo detalhado dos dados da geradora */}
-                <div className="flex justify-end mt-4 space-x-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => handleVisualizarGeradora(geradora)}
-                  >
-                    <Eye className="h-4 w-4 mr-2" />
-                    Visualizar
-                  </Button>
-                  <Button 
-                    size="sm"
-                    onClick={() => handleEditarGeradora(geradora)}
-                  >
-                    <Edit className="h-4 w-4 mr-2" />
-                    Editar
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            Lista de Geradoras ({filteredGeradoras.length} encontradas)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading && geradoras.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <p>Carregando geradoras...</p>
+            </div>
+          ) : filteredGeradoras.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <p>Nenhuma geradora encontrada com os filtros aplicados.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredGeradoras.map((geradora) => (
+                <Card
+                  key={geradora.id}
+                  className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
+                  onClick={() => handleVisualizarGeradora(geradora)}
+                >
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg font-semibold truncate flex justify-between items-center">
+                      <div className="flex items-center">
+                        <Building2 className="h-5 w-5 mr-2 text-primary" />
+                        {geradora.nome}
+                      </div>
+                      <Badge>{geradora.status}</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm text-muted-foreground space-y-1">
+                    <div className="flex items-center">
+                      <DollarSign className="h-4 w-4 mr-1" />
+                      Status de Pagamento: {getPaymentStatusBadge(geradora.ultimoPagamento)}
+                    </div>
+                    <p className="flex items-center">
+                      <Users className="h-4 w-4 mr-1" />
+                      Clientes Vinculados: <span className="font-medium text-foreground">{geradora.usuariosAtivos || 0}</span>
+                    </p>
+                    <div className="flex justify-end mt-4">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditarGeradora(geradora);
+                        }}
+                      >
+                        <Edit className="h-4 w-4 mr-1" /> Editar
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-      {/* Modal de Detalhes da Geradora */}
-      {geradoraSelecionada && (
-        <DetalhesGeradoraModal
-          isOpen={modalDetalhesAberto}
-          onClose={() => setModalDetalhesAberto(false)}
-          geradora={{
-            id: geradoraSelecionada.id,
-            nome: geradoraSelecionada.nome,
-            potencia: "5 MW", // Exemplo, ajustar conforme necessário
-            localizacao: geradoraSelecionada.endereco || "Localização não informada",
-            status: geradoraSelecionada.status,
-            clientesVinculados: geradoraSelecionada.usuariosAtivos || 0,
-            latitude: -8.287221, // Exemplo, ajustar conforme necessário
-            longitude: -35.971575 // Exemplo, ajustar conforme necessário
-          }}
-        />
-      )}
+      <DetalhesGeradoraModal
+        isOpen={modalDetalhesAberto}
+        onClose={() => setModalDetalhesAberto(false)}
+        geradora={geradoraSelecionada}
+      />
 
-      {/* Modal de Edição da Geradora */}
       {geradoraSelecionada && (
         <EditarGeradoraModal
           isOpen={modalEditarAberto}
           onClose={() => setModalEditarAberto(false)}
-          geradora={{
-            id: geradoraSelecionada.id,
-            nome: geradoraSelecionada.nome,
-            potencia: "5 MW", // Exemplo, ajustar conforme necessário
-            localizacao: geradoraSelecionada.endereco || "Localização não informada",
-            status: geradoraSelecionada.status,
-            clientesVinculados: geradoraSelecionada.usuariosAtivos || 0
-          }}
+          geradora={geradoraSelecionada}
           onSave={handleSalvarGeradora}
           onDelete={handleExcluirGeradora}
         />
       )}
-      
-      {/* Modal de Nova Geradora */}
+
       <NovaGeradoraModal
         isOpen={modalNovaGeradoraAberto}
         onClose={() => setModalNovaGeradoraAberto(false)}
         onSave={handleSalvarNovaGeradora}
-        geradoras={geradoras.map(g => ({ nome: g.nome }))}
       />
+
+      <Card className="h-full">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Geradoras Cadastradas</CardTitle>
+          <Blocks className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{geradoras.length}</div>
+          <p className="text-xs text-muted-foreground mt-1">
+            Total de geradoras ativas no sistema.
+          </p>
+          <div className="text-xs text-muted-foreground mt-2">
+            <span className="mr-1">Status do Firebase:</span>
+            <Badge variant={firebaseStatus === 'online' ? 'default' : 'destructive'}>
+              {firebaseStatus === 'online' ? 'Online' : 'Offline'}
+            </Badge>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

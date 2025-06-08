@@ -1,373 +1,437 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogClose,
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Search, UserPlus, MoreVertical, UserMinus } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/components/ui/use-toast";
-
-interface UsinaGeradora {
-  id: number;
-  nome: string;
-  potencia: string;
-  localizacao: string;
-  endereco?: string;
-  cnpj?: string;
-  status: string;
-  clientesVinculados: number;
-  marcaInversor?: string;
-  apiKey?: string;
-  descricao?: string;
-  dataInstalacao?: string;
-  dataCadastro?: string;
-}
-
-interface Cliente {
-  id: number;
-  nome: string;
-  email: string;
-  telefone: string;
-  consumoMedio: number;
-  status: string;
-  dataCadastro: string;
-}
+import { UsinaGeradora } from "@/portal-admin/types/usinaGeradora";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Search, UserPlus, UserMinus, Check, X } from "lucide-react";
+import { clienteService } from "@/services/clienteService";
+import { usinaService } from "@/services/usinaService";
+import { Cliente } from "@/portal-admin/types/cliente";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface GerenciarClientesUsinaModalProps {
   isOpen: boolean;
   onClose: () => void;
-  geradora: UsinaGeradora | undefined;
+  geradora: UsinaGeradora;
+  onClientesUpdated?: () => void;
 }
 
-const GerenciarClientesUsinaModal = ({ isOpen, onClose, geradora }: GerenciarClientesUsinaModalProps) => {
-  const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [clientesDisponiveis, setClientesDisponiveis] = useState<Cliente[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [isVincularClienteOpen, setIsVincularClienteOpen] = useState(false);
+const GerenciarClientesUsinaModal = ({ isOpen, onClose, geradora, onClientesUpdated }: GerenciarClientesUsinaModalProps) => {
   const { toast } = useToast();
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [clientesVinculados, setClientesVinculados] = useState<Cliente[]>([]);
+  const [clientesDisponiveis, setClientesDisponiveis] = useState<Cliente[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedClientes, setSelectedClientes] = useState<string[]>([]);
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [clientesToRemove, setClientesToRemove] = useState<Cliente[]>([]);
 
-  // Carregar clientes vinculados à usina
-  useEffect(() => {
-    if (geradora) {
-      // Simulando carregamento de clientes do localStorage ou API
-      const clientesSalvos = localStorage.getItem(`clientes-usina-${geradora.id}`);
-      if (clientesSalvos) {
-        try {
-          setClientes(JSON.parse(clientesSalvos));
-        } catch (error) {
-          console.error("Erro ao carregar clientes:", error);
-          // Inicializar com dados de exemplo
-          setClientes([
-            {
-              id: 1,
-              nome: "João Silva",
-              email: "joao.silva@exemplo.com",
-              telefone: "(11) 98765-4321",
-              consumoMedio: 350,
-              status: "ativo",
-              dataCadastro: "2025-01-15T10:30:00Z"
-            },
-            {
-              id: 2,
-              nome: "Maria Oliveira",
-              email: "maria.oliveira@exemplo.com",
-              telefone: "(11) 91234-5678",
-              consumoMedio: 420,
-              status: "ativo",
-              dataCadastro: "2025-02-20T14:45:00Z"
-            }
-          ]);
-        }
-      } else {
-        // Inicializar com dados de exemplo
-        setClientes([
-          {
-            id: 1,
-            nome: "João Silva",
-            email: "joao.silva@exemplo.com",
-            telefone: "(11) 98765-4321",
-            consumoMedio: 350,
-            status: "ativo",
-            dataCadastro: "2025-01-15T10:30:00Z"
-          },
-          {
-            id: 2,
-            nome: "Maria Oliveira",
-            email: "maria.oliveira@exemplo.com",
-            telefone: "(11) 91234-5678",
-            consumoMedio: 420,
-            status: "ativo",
-            dataCadastro: "2025-02-20T14:45:00Z"
-          }
-        ]);
-      }
-
-      // Carregar clientes disponíveis para vincular
-      const todosClientes = localStorage.getItem('clientes');
-      if (todosClientes) {
-        try {
-          const clientesParsed = JSON.parse(todosClientes);
-          // Filtrar clientes que não estão vinculados a esta usina
-          const clientesIds = clientes.map(c => c.id);
-          setClientesDisponiveis(clientesParsed.filter((c: Cliente) => !clientesIds.includes(c.id)));
-        } catch (error) {
-          console.error("Erro ao carregar clientes disponíveis:", error);
-          setClientesDisponiveis([
-            {
-              id: 3,
-              nome: "Carlos Pereira",
-              email: "carlos.pereira@exemplo.com",
-              telefone: "(11) 97777-8888",
-              consumoMedio: 280,
-              status: "ativo",
-              dataCadastro: "2025-03-10T09:15:00Z"
-            },
-            {
-              id: 4,
-              nome: "Ana Santos",
-              email: "ana.santos@exemplo.com",
-              telefone: "(11) 96666-7777",
-              consumoMedio: 510,
-              status: "ativo",
-              dataCadastro: "2025-03-25T16:20:00Z"
-            }
-          ]);
-        }
-      } else {
-        setClientesDisponiveis([
-          {
-            id: 3,
-            nome: "Carlos Pereira",
-            email: "carlos.pereira@exemplo.com",
-            telefone: "(11) 97777-8888",
-            consumoMedio: 280,
-            status: "ativo",
-            dataCadastro: "2025-03-10T09:15:00Z"
-          },
-          {
-            id: 4,
-            nome: "Ana Santos",
-            email: "ana.santos@exemplo.com",
-            telefone: "(11) 96666-7777",
-            consumoMedio: 510,
-            status: "ativo",
-            dataCadastro: "2025-03-25T16:20:00Z"
-          }
-        ]);
-      }
+  const carregarClientes = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Buscar todos os clientes da geradora
+      const todosClientes = await clienteService.getByGeradora(geradora.geradoraId);
+      setClientes(todosClientes);
+      
+      // Filtrar clientes já vinculados à usina
+      const vinculados = todosClientes.filter(cliente => 
+        cliente.usinaId === geradora.id
+      );
+      setClientesVinculados(vinculados);
+      
+      // Filtrar clientes disponíveis (não vinculados a nenhuma usina ou vinculados a outra usina)
+      const disponiveis = todosClientes.filter(cliente => 
+        !cliente.usinaId || cliente.usinaId !== geradora.id
+      );
+      setClientesDisponiveis(disponiveis);
+    } catch (error) {
+      console.error("Erro ao carregar clientes:", error);
+      toast({
+        title: "Erro ao carregar clientes",
+        description: "Não foi possível carregar a lista de clientes. Tente novamente mais tarde.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
-  }, [geradora]);
+  }, [geradora, toast]);
 
-  // Salvar clientes no localStorage sempre que houver mudanças
+  // Carregar clientes quando o modal for aberto
   useEffect(() => {
-    if (geradora && clientes.length >= 0) {
-      localStorage.setItem(`clientes-usina-${geradora.id}`, JSON.stringify(clientes));
-      console.log("Clientes salvos no localStorage:", clientes);
+    if (isOpen) {
+      carregarClientes();
     }
-  }, [clientes, geradora]);
+  }, [isOpen, geradora, carregarClientes]);
 
-  const handleVincularCliente = (cliente: Cliente) => {
-    if (!geradora) return;
-    
-    // Adicionar cliente à lista de clientes vinculados
-    setClientes([...clientes, cliente]);
-    
-    // Remover cliente da lista de disponíveis
-    setClientesDisponiveis(clientesDisponiveis.filter(c => c.id !== cliente.id));
-    
-    // Atualizar contador de clientes vinculados na usina
-    // (Isso seria feito através de uma API em um ambiente real)
-    
-    toast({
-      title: "Cliente vinculado",
-      description: `O cliente ${cliente.nome} foi vinculado à usina ${geradora.nome} com sucesso.`,
-    });
-    
-    setIsVincularClienteOpen(false);
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
   };
 
-  const handleDesvincularCliente = (cliente: Cliente) => {
-    if (!geradora) return;
-    
-    // Remover cliente da lista de clientes vinculados
-    setClientes(clientes.filter(c => c.id !== cliente.id));
-    
-    // Adicionar cliente de volta à lista de disponíveis
-    setClientesDisponiveis([...clientesDisponiveis, cliente]);
-    
-    // Atualizar contador de clientes vinculados na usina
-    // (Isso seria feito através de uma API em um ambiente real)
-    
-    toast({
-      title: "Cliente desvinculado",
-      description: `O cliente ${cliente.nome} foi desvinculado da usina ${geradora.nome}.`,
+  const handleSelectCliente = (clienteId: string) => {
+    setSelectedClientes(prev => {
+      if (prev.includes(clienteId)) {
+        return prev.filter(id => id !== clienteId);
+      } else {
+        return [...prev, clienteId];
+      }
     });
   };
 
-  // Filtragem de clientes
-  const clientesFiltrados = clientes.filter(cliente => 
-    searchTerm === "" || 
-    cliente.nome.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    cliente.email.toLowerCase().includes(searchTerm.toLowerCase())
+  const handleSelectAll = (clientes: Cliente[]) => {
+    if (selectedClientes.length === clientes.length) {
+      // Se todos já estão selecionados, desmarcar todos
+      setSelectedClientes([]);
+    } else {
+      // Caso contrário, selecionar todos
+      setSelectedClientes(clientes.map(cliente => cliente.id));
+    }
+  };
+
+  const handleVincularClientes = async () => {
+    if (selectedClientes.length === 0) {
+      toast({
+        title: "Nenhum cliente selecionado",
+        description: "Selecione pelo menos um cliente para vincular à usina.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // Atualizar cada cliente selecionado
+      for (const clienteId of selectedClientes) {
+        const cliente = clientes.find(c => c.id === clienteId);
+        if (cliente) {
+          await clienteService.update(clienteId, {
+            ...cliente,
+            usinaId: geradora.id
+          });
+        }
+      }
+
+      // Atualizar o contador de clientes na usina
+      const novoNumeroClientes = clientesVinculados.length + selectedClientes.filter(id => 
+        !clientesVinculados.some(c => c.id === id)
+      ).length;
+      
+      // Atualizar a usina com o novo número de clientes
+      await usinaService.update(geradora.id, {
+        ...geradora,
+        clientesVinculados: novoNumeroClientes
+      });
+
+      toast({
+        title: "Clientes vinculados com sucesso",
+        description: `${selectedClientes.length} cliente(s) vinculado(s) à usina "${geradora.nome}".`
+      });
+
+      // Recarregar a lista de clientes
+      carregarClientes();
+      
+      // Limpar seleção
+      setSelectedClientes([]);
+      
+      // Notificar o componente pai que os clientes foram atualizados
+      if (onClientesUpdated) {
+        onClientesUpdated();
+      }
+    } catch (error) {
+      console.error("Erro ao vincular clientes:", error);
+      toast({
+        title: "Erro ao vincular clientes",
+        description: "Ocorreu um erro ao vincular os clientes à usina. Tente novamente.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleConfirmRemoverClientes = () => {
+    const clientesSelecionados = clientesVinculados.filter(cliente => 
+      selectedClientes.includes(cliente.id)
+    );
+    
+    if (clientesSelecionados.length === 0) {
+      toast({
+        title: "Nenhum cliente selecionado",
+        description: "Selecione pelo menos um cliente para desvincular da usina.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setClientesToRemove(clientesSelecionados);
+    setIsConfirmDialogOpen(true);
+  };
+
+  const handleRemoverClientes = async () => {
+    try {
+      // Atualizar cada cliente selecionado
+      for (const cliente of clientesToRemove) {
+        await clienteService.update(cliente.id, {
+          ...cliente,
+          usinaId: null
+        });
+      }
+
+      // Atualizar o contador de clientes na usina
+      const novoNumeroClientes = clientesVinculados.length - clientesToRemove.length;
+      
+      // Atualizar a usina com o novo número de clientes
+      await usinaService.update(geradora.id, {
+        ...geradora,
+        clientesVinculados: novoNumeroClientes >= 0 ? novoNumeroClientes : 0
+      });
+
+      toast({
+        title: "Clientes desvinculados com sucesso",
+        description: `${clientesToRemove.length} cliente(s) desvinculado(s) da usina "${geradora.nome}".`
+      });
+
+      // Recarregar a lista de clientes
+      carregarClientes();
+      
+      // Limpar seleção
+      setSelectedClientes([]);
+      setClientesToRemove([]);
+      setIsConfirmDialogOpen(false);
+      
+      // Notificar o componente pai que os clientes foram atualizados
+      if (onClientesUpdated) {
+        onClientesUpdated();
+      }
+    } catch (error) {
+      console.error("Erro ao desvincular clientes:", error);
+      toast({
+        title: "Erro ao desvincular clientes",
+        description: "Ocorreu um erro ao desvincular os clientes da usina. Tente novamente.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Filtrar clientes com base no termo de busca
+  const filteredClientesVinculados = clientesVinculados.filter(cliente =>
+    cliente.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    cliente.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    cliente.cpfCnpj.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Filtragem de clientes disponíveis
-  const clientesDisponiveisFiltrados = clientesDisponiveis.filter(cliente => 
-    searchTerm === "" || 
-    cliente.nome.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    cliente.email.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredClientesDisponiveis = clientesDisponiveis.filter(cliente =>
+    cliente.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    cliente.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    cliente.cpfCnpj.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  if (!geradora) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[800px]">
-        <DialogHeader>
-          <DialogTitle>Gerenciar Clientes da Usina</DialogTitle>
-          <DialogDescription>
-            Vincule ou desvincule clientes da usina {geradora.nome}.
-          </DialogDescription>
-        </DialogHeader>
-        
-        <div className="py-4">
-          <div className="flex justify-between items-center mb-4">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Buscar cliente..."
-                className="pl-9"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <Button 
-              onClick={() => setIsVincularClienteOpen(true)}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              <UserPlus className="h-4 w-4 mr-2" />
-              Vincular Cliente
-            </Button>
-          </div>
-          
-          <div className="border rounded-md">
-            <div className="grid grid-cols-5 px-4 py-3 border-b text-sm font-medium text-gray-500">
-              <div className="col-span-2">Nome</div>
-              <div>Email</div>
-              <div>Consumo Médio</div>
-              <div className="text-right">Ações</div>
-            </div>
-            
-            {clientesFiltrados.length > 0 ? (
-              clientesFiltrados.map((cliente) => (
-                <div key={cliente.id} className="grid grid-cols-5 px-4 py-3 border-b last:border-0 items-center">
-                  <div className="col-span-2 font-medium">{cliente.nome}</div>
-                  <div className="text-sm">{cliente.email}</div>
-                  <div>{cliente.consumoMedio} kWh</div>
-                  <div className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleDesvincularCliente(cliente)}>
-                          <UserMinus className="h-4 w-4 mr-2" />
-                          Desvincular
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="px-4 py-6 text-center text-gray-500">
-                Nenhum cliente vinculado a esta usina
-              </div>
-            )}
-          </div>
-        </div>
-        
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Fechar
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-      
-      {/* Modal para vincular clientes */}
-      <Dialog open={isVincularClienteOpen} onOpenChange={setIsVincularClienteOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Vincular Cliente à Usina</DialogTitle>
+            <DialogTitle>Gerenciar Clientes da Usina</DialogTitle>
             <DialogDescription>
-              Selecione um cliente para vincular à usina {geradora.nome}.
+              Vincule ou desvincule clientes da usina "{geradora.nome}"
             </DialogDescription>
           </DialogHeader>
           
-          <div className="py-4">
-            <div className="relative flex-1 mb-4">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Buscar cliente disponível..."
-                className="pl-9"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+          <div className="space-y-6 mt-4">
+            <div className="flex items-center space-x-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
+                <Input
+                  placeholder="Buscar por nome, email ou CPF/CNPJ"
+                  value={searchTerm}
+                  onChange={handleSearch}
+                  className="pl-8"
+                />
+              </div>
             </div>
             
-            <div className="border rounded-md">
-              <div className="grid grid-cols-4 px-4 py-3 border-b text-sm font-medium text-gray-500">
-                <div className="col-span-2">Nome</div>
-                <div>Email</div>
-                <div className="text-right">Ação</div>
-              </div>
-              
-              {clientesDisponiveisFiltrados.length > 0 ? (
-                clientesDisponiveisFiltrados.map((cliente) => (
-                  <div key={cliente.id} className="grid grid-cols-4 px-4 py-3 border-b last:border-0 items-center">
-                    <div className="col-span-2 font-medium">{cliente.nome}</div>
-                    <div className="text-sm">{cliente.email}</div>
-                    <div className="text-right">
-                      <Button 
-                        size="sm" 
-                        onClick={() => handleVincularCliente(cliente)}
-                        className="bg-green-600 hover:bg-green-700"
-                      >
-                        <UserPlus className="h-3 w-3 mr-1" />
-                        Vincular
-                      </Button>
-                    </div>
+            {loading ? (
+              <div className="text-center py-10">Carregando clientes...</div>
+            ) : (
+              <div className="space-y-8">
+                {/* Clientes vinculados */}
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-lg font-medium">Clientes Vinculados ({filteredClientesVinculados.length})</h3>
+                    <Button 
+                      variant="destructive" 
+                      size="sm"
+                      onClick={handleConfirmRemoverClientes}
+                      disabled={selectedClientes.length === 0 || !selectedClientes.some(id => 
+                        clientesVinculados.some(c => c.id === id)
+                      )}
+                      className="flex items-center"
+                    >
+                      <UserMinus className="h-4 w-4 mr-2" />
+                      Desvincular Selecionados
+                    </Button>
                   </div>
-                ))
-              ) : (
-                <div className="px-4 py-6 text-center text-gray-500">
-                  Nenhum cliente disponível para vincular
+                  
+                  {filteredClientesVinculados.length === 0 ? (
+                    <div className="text-center py-6 bg-gray-50 rounded-md">
+                      <p className="text-gray-500">Nenhum cliente vinculado a esta usina.</p>
+                    </div>
+                  ) : (
+                    <div className="border rounded-md">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-12">
+                              <Checkbox 
+                                checked={selectedClientes.length > 0 && 
+                                  filteredClientesVinculados.every(cliente => 
+                                    selectedClientes.includes(cliente.id)
+                                  )}
+                                onCheckedChange={() => handleSelectAll(filteredClientesVinculados)}
+                              />
+                            </TableHead>
+                            <TableHead>Nome</TableHead>
+                            <TableHead>Email</TableHead>
+                            <TableHead>CPF/CNPJ</TableHead>
+                            <TableHead>Telefone</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredClientesVinculados.map(cliente => (
+                            <TableRow key={cliente.id}>
+                              <TableCell>
+                                <Checkbox 
+                                  checked={selectedClientes.includes(cliente.id)}
+                                  onCheckedChange={() => handleSelectCliente(cliente.id)}
+                                />
+                              </TableCell>
+                              <TableCell className="font-medium">{cliente.nome}</TableCell>
+                              <TableCell>{cliente.email}</TableCell>
+                              <TableCell>{cliente.cpfCnpj}</TableCell>
+                              <TableCell>{cliente.telefone}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+                
+                {/* Clientes disponíveis */}
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-lg font-medium">Clientes Disponíveis ({filteredClientesDisponiveis.length})</h3>
+                    <Button 
+                      variant="default" 
+                      size="sm"
+                      onClick={handleVincularClientes}
+                      disabled={selectedClientes.length === 0 || !selectedClientes.some(id => 
+                        clientesDisponiveis.some(c => c.id === id)
+                      )}
+                      className="flex items-center bg-green-600 hover:bg-green-700"
+                    >
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Vincular Selecionados
+                    </Button>
+                  </div>
+                  
+                  {filteredClientesDisponiveis.length === 0 ? (
+                    <div className="text-center py-6 bg-gray-50 rounded-md">
+                      <p className="text-gray-500">Nenhum cliente disponível para vincular.</p>
+                    </div>
+                  ) : (
+                    <div className="border rounded-md">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-12">
+                              <Checkbox 
+                                checked={selectedClientes.length > 0 && 
+                                  filteredClientesDisponiveis.every(cliente => 
+                                    selectedClientes.includes(cliente.id)
+                                  )}
+                                onCheckedChange={() => handleSelectAll(filteredClientesDisponiveis)}
+                              />
+                            </TableHead>
+                            <TableHead>Nome</TableHead>
+                            <TableHead>Email</TableHead>
+                            <TableHead>CPF/CNPJ</TableHead>
+                            <TableHead>Telefone</TableHead>
+                            <TableHead>Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredClientesDisponiveis.map(cliente => (
+                            <TableRow key={cliente.id}>
+                              <TableCell>
+                                <Checkbox 
+                                  checked={selectedClientes.includes(cliente.id)}
+                                  onCheckedChange={() => handleSelectCliente(cliente.id)}
+                                />
+                              </TableCell>
+                              <TableCell className="font-medium">{cliente.nome}</TableCell>
+                              <TableCell>{cliente.email}</TableCell>
+                              <TableCell>{cliente.cpfCnpj}</TableCell>
+                              <TableCell>{cliente.telefone}</TableCell>
+                              <TableCell>
+                                {cliente.usinaId ? (
+                                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                    Vinculado a outra usina
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    Disponível
+                                  </span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
           
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsVincularClienteOpen(false)}>
-              Cancelar
-            </Button>
+          <DialogFooter className="mt-6">
+            <DialogClose asChild>
+              <Button variant="outline">Fechar</Button>
+            </DialogClose>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Dialog>
+
+      {/* Diálogo de confirmação para remover clientes */}
+      <AlertDialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar desvinculação</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja desvincular {clientesToRemove.length} cliente(s) da usina "{geradora.nome}"?
+              <br /><br />
+              Os clientes não serão excluídos, apenas desvinculados desta usina.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRemoverClientes} className="bg-red-600 hover:bg-red-700">
+              Sim, desvincular
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 

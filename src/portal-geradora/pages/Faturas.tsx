@@ -1,2 +1,2 @@
-import FaturasPage from '@/pages/Faturas';
-export { default } from '@/pages/Faturas';
+import FaturasPage from '@/pages/FaturasPage';
+export { default } from '@/pages/FaturasPage';

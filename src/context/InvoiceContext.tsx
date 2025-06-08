@@ -1,91 +1,173 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
-import type { Tables } from '@/lib/supabase';
-
-type Invoice = Tables['invoices'];
+import { 
+  db, 
+  collection, 
+  doc, 
+  getDoc, 
+  getDocs, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  query, 
+  where, 
+  orderBy, 
+  onSnapshot,
+  auth,
+  Timestamp,
+  Fatura
+} from '@/lib/firebase';
 
 interface InvoiceContextType {
-  invoices: Invoice[];
+  invoices: Fatura[];
   loading: boolean;
-  addInvoice: (invoice: Omit<Invoice, 'id' | 'created_at' | 'user_id'>) => Promise<void>;
-  updateInvoiceStatus: (id: string, status: Invoice['status']) => Promise<void>;
+  addInvoice: (invoice: Omit<Fatura, 'id' | 'createdAt' | 'updatedAt' | 'userId'>) => Promise<void>;
+  updateInvoiceStatus: (id: string, status: Fatura['status']) => Promise<void>;
   removeInvoice: (id: string) => Promise<void>;
 }
 
 const InvoiceContext = createContext<InvoiceContextType | undefined>(undefined);
 
 export function InvoiceProvider({ children }: { children: React.ReactNode }) {
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [invoices, setInvoices] = useState<Fatura[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchInvoices();
+    // Verificar se há usuário autenticado
+    const unsubscribeAuth = auth.onAuthStateChanged(async (user) => {
+      if (!user) {
+        setInvoices([]);
+        setLoading(false);
+        return;
+      }
 
-    // Inscrever-se para mudanças em tempo real
-    const subscription = supabase
-      .channel('invoices_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'invoices',
-        },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            setInvoices((prev) => [...prev, payload.new as Invoice]);
-          } else if (payload.eventType === 'UPDATE') {
-            setInvoices((prev) =>
-              prev.map((invoice) =>
-                invoice.id === payload.new.id ? (payload.new as Invoice) : invoice
-              )
-            );
-          } else if (payload.eventType === 'DELETE') {
-            setInvoices((prev) =>
-              prev.filter((invoice) => invoice.id !== payload.old.id)
-            );
-          }
-        }
-      )
-      .subscribe();
+      // Criar uma consulta para buscar faturas do usuário
+      // Removendo o orderBy para evitar a necessidade de um índice composto
+      const invoicesQuery = query(
+        collection(db, 'faturas'),
+        where('userId', '==', user.uid)
+      );
+
+      // Inscrever-se para mudanças em tempo real
+      const unsubscribeSnapshot = onSnapshot(invoicesQuery, (snapshot) => {
+        const invoicesList: Fatura[] = [];
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          invoicesList.push({
+            id: doc.id,
+            userId: data.userId,
+            amount: data.amount,
+            dueDate: data.dueDate.toDate(),
+            status: data.status,
+            description: data.description,
+            reference: data.reference,
+            createdAt: data.createdAt.toDate(),
+            updatedAt: data.updatedAt.toDate()
+          });
+        });
+        
+        // Ordenar manualmente por data de criação (mais recentes primeiro)
+        invoicesList.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        
+        setInvoices(invoicesList);
+        setLoading(false);
+      });
+
+      return () => {
+        unsubscribeSnapshot();
+      };
+    });
 
     return () => {
-      subscription.unsubscribe();
+      unsubscribeAuth();
     };
   }, []);
 
-  const fetchInvoices = async () => {
+  const addInvoice = async (invoice: Omit<Fatura, 'id' | 'createdAt' | 'updatedAt' | 'userId'>) => {
     try {
-      const { data, error } = await supabase
-        .from('invoices')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Verificar se há usuário autenticado
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        throw new Error('Usuário não autenticado');
+      }
 
-      if (error) throw error;
-      setInvoices(data || []);
+      const now = new Date();
+      
+      // Adicionar fatura ao Firestore
+      await addDoc(collection(db, 'faturas'), {
+        userId: currentUser.uid,
+        amount: invoice.amount,
+        dueDate: Timestamp.fromDate(invoice.dueDate),
+        status: invoice.status,
+        description: invoice.description,
+        reference: invoice.reference,
+        createdAt: Timestamp.fromDate(now),
+        updatedAt: Timestamp.fromDate(now)
+      });
     } catch (error) {
-      console.error('Erro ao buscar faturas:', error);
-    } finally {
-      setLoading(false);
+      console.error('Erro ao adicionar fatura:', error);
+      throw error;
     }
   };
 
-  const addInvoice = async (invoice: Omit<Invoice, 'id' | 'created_at' | 'user_id'>) => {
-    const { error } = await supabase.from('invoices').insert([invoice]);
-    if (error) throw error;
-  };
+  const updateInvoiceStatus = async (id: string, status: Fatura['status']) => {
+    try {
+      // Verificar se há usuário autenticado
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        throw new Error('Usuário não autenticado');
+      }
 
-  const updateInvoiceStatus = async (id: string, status: Invoice['status']) => {
-    const { error } = await supabase
-      .from('invoices')
-      .update({ status })
-      .eq('id', id);
-    if (error) throw error;
+      // Verificar se a fatura pertence ao usuário atual
+      const invoiceRef = doc(db, 'faturas', id);
+      const invoiceDoc = await getDoc(invoiceRef);
+      
+      if (!invoiceDoc.exists()) {
+        throw new Error('Fatura não encontrada');
+      }
+      
+      const invoiceData = invoiceDoc.data();
+      if (invoiceData.userId !== currentUser.uid) {
+        throw new Error('Você não tem permissão para atualizar esta fatura');
+      }
+      
+      // Atualizar o status da fatura
+      await updateDoc(invoiceRef, {
+        status,
+        updatedAt: Timestamp.now()
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar status da fatura:', error);
+      throw error;
+    }
   };
 
   const removeInvoice = async (id: string) => {
-    const { error } = await supabase.from('invoices').delete().eq('id', id);
-    if (error) throw error;
+    try {
+      // Verificar se há usuário autenticado
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      // Verificar se a fatura pertence ao usuário atual
+      const invoiceRef = doc(db, 'faturas', id);
+      const invoiceDoc = await getDoc(invoiceRef);
+      
+      if (!invoiceDoc.exists()) {
+        throw new Error('Fatura não encontrada');
+      }
+      
+      const invoiceData = invoiceDoc.data();
+      if (invoiceData.userId !== currentUser.uid) {
+        throw new Error('Você não tem permissão para remover esta fatura');
+      }
+      
+      // Remover a fatura
+      await deleteDoc(invoiceRef);
+    } catch (error) {
+      console.error('Erro ao remover fatura:', error);
+      throw error;
+    }
   };
 
   return (
@@ -103,4 +185,4 @@ export function useInvoice() {
     throw new Error('useInvoice deve ser usado dentro de um InvoiceProvider');
   }
   return context;
-} 
+}

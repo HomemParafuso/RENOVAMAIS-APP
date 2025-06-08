@@ -1,295 +1,262 @@
 import React, { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogClose,
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-
-interface UsinaGeradora {
-  id: number;
-  nome: string;
-  potencia: string;
-  localizacao: string;
-  endereco?: string;
-  cnpj?: string;
-  status: string;
-  clientesVinculados: number;
-  marcaInversor?: string;
-  apiKey?: string;
-  descricao?: string;
-  dataInstalacao?: string;
-  dataCadastro?: string;
-}
+import { UsinaGeradora } from "@/portal-admin/types/usinaGeradora";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Trash2 } from "lucide-react";
 
 interface EditarUsinaModalProps {
   isOpen: boolean;
   onClose: () => void;
-  geradora: UsinaGeradora | undefined;
-  onSave: (geradora: UsinaGeradora) => void;
-  onDelete: (geradora: UsinaGeradora) => void;
+  geradora: UsinaGeradora;
+  onSave: (usina: UsinaGeradora) => void;
+  onDelete: (usina: UsinaGeradora) => void;
+  isViewOnly?: boolean;
 }
 
-const EditarUsinaModal = ({ isOpen, onClose, geradora, onSave, onDelete }: EditarUsinaModalProps) => {
+const EditarUsinaModal = ({ isOpen, onClose, geradora, onSave, onDelete, isViewOnly = false }: EditarUsinaModalProps) => {
   const { toast } = useToast();
   
   // Dados da usina geradora
   const [nome, setNome] = useState("");
-  const [potencia, setPotencia] = useState("");
   const [localizacao, setLocalizacao] = useState("");
   const [endereco, setEndereco] = useState("");
+  const [codigoConsumidor, setCodigoConsumidor] = useState("");
+  const [email, setEmail] = useState("");
   const [cnpj, setCnpj] = useState("");
-  const [status, setStatus] = useState("ativo");
-  const [marcaInversor, setMarcaInversor] = useState("");
-  const [apiKey, setApiKey] = useState("");
   const [descricao, setDescricao] = useState("");
-  const [dataInstalacao, setDataInstalacao] = useState("");
+  
+  // Estado para o diálogo de confirmação de exclusão
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
+  // Carregar dados da usina quando o modal for aberto
   useEffect(() => {
     if (geradora) {
       setNome(geradora.nome || "");
-      setPotencia(geradora.potencia || "");
       setLocalizacao(geradora.localizacao || "");
       setEndereco(geradora.endereco || "");
+      setCodigoConsumidor(geradora.codigoConsumidor || "");
+      setEmail(geradora.email || "");
       setCnpj(geradora.cnpj || "");
-      setStatus(geradora.status || "ativo");
-      setMarcaInversor(geradora.marcaInversor || "");
-      setApiKey(geradora.apiKey || "");
       setDescricao(geradora.descricao || "");
-      setDataInstalacao(geradora.dataInstalacao || "");
     }
-  }, [geradora]);
+  }, [geradora, isOpen]);
 
-  const handleSave = () => {
-    if (!geradora) return;
-    
-    // Validação básica
-    if (!nome || !potencia || !localizacao) {
+  const handleSalvar = () => {
+    // Validação dos campos obrigatórios
+    if (!nome || !localizacao || !endereco || !codigoConsumidor || !email || !cnpj) {
       toast({
         title: "Dados incompletos",
-        description: "Nome, potência e localização são campos obrigatórios.",
-        variant: "destructive",
+        description: "Por favor, preencha todos os campos obrigatórios da usina geradora.",
+        variant: "destructive"
       });
       return;
     }
 
-    // Construir objeto da usina atualizada
+    // Criar objeto da usina atualizada
     const usinaAtualizada: UsinaGeradora = {
       ...geradora,
       nome,
-      potencia,
       localizacao,
       endereco,
+      codigoConsumidor,
+      email,
       cnpj,
-      status,
-      marcaInversor,
-      apiKey,
-      descricao,
-      dataInstalacao,
+      descricao
     };
 
+    console.log("Atualizando usina:", nome);
+    
+    // Chamar a função de callback para salvar
     onSave(usinaAtualizada);
+    
+    // Fechar o modal
     onClose();
   };
 
-  const handleDelete = () => {
-    if (!geradora) return;
+  const handleExcluir = () => {
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmarExclusao = () => {
     onDelete(geradora);
+    setIsDeleteDialogOpen(false);
     onClose();
   };
-
-  if (!geradora) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle>Editar Usina Geradora</DialogTitle>
-          <DialogDescription>
-            Atualize as informações da usina geradora. Clique em salvar quando terminar.
-          </DialogDescription>
-        </DialogHeader>
-        
-        <Tabs defaultValue="dados" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="dados">Dados Básicos</TabsTrigger>
-            <TabsTrigger value="tecnico">Dados Técnicos</TabsTrigger>
-          </TabsList>
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>{isViewOnly ? "Detalhes da Usina Geradora" : "Editar Usina Geradora"}</DialogTitle>
+            <DialogDescription>
+              {isViewOnly ? "Visualize os dados da usina geradora" : "Atualize os dados da usina geradora"}
+            </DialogDescription>
+          </DialogHeader>
           
-          {/* Aba: Dados Básicos */}
-          <TabsContent value="dados" className="space-y-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="nome" className="text-right">
-                Nome da Usina
-              </Label>
-              <Input
-                id="nome"
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
-                className="col-span-3"
-              />
+          <div className="space-y-4 mt-4">
+            <div>
+              <Label htmlFor="nome">Nome da Usina *</Label>
+              {isViewOnly ? (
+                <div className="p-2 bg-gray-100 rounded-md text-gray-800">{nome}</div>
+              ) : (
+                <Input 
+                  id="nome" 
+                  placeholder="Ex: Usina Solar São Paulo I" 
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
+                  required
+                />
+              )}
             </div>
             
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="cnpj" className="text-right">
-                CNPJ
-              </Label>
-              <Input
-                id="cnpj"
-                value={cnpj}
-                onChange={(e) => setCnpj(e.target.value)}
-                className="col-span-3"
-              />
+            <div>
+              <Label htmlFor="codigoConsumidor">Código de Consumidor *</Label>
+              {isViewOnly ? (
+                <div className="p-2 bg-gray-100 rounded-md text-gray-800">{codigoConsumidor}</div>
+              ) : (
+                <Input 
+                  id="codigoConsumidor" 
+                  placeholder="Código que consta no PDF de energia da concessionária" 
+                  value={codigoConsumidor}
+                  onChange={(e) => setCodigoConsumidor(e.target.value)}
+                  required
+                />
+              )}
             </div>
             
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="localizacao" className="text-right">
-                Cidade/Estado
-              </Label>
-              <Input
-                id="localizacao"
-                value={localizacao}
-                onChange={(e) => setLocalizacao(e.target.value)}
-                className="col-span-3"
-              />
+            <div>
+              <Label htmlFor="cnpj">CNPJ da Usina *</Label>
+              {isViewOnly ? (
+                <div className="p-2 bg-gray-100 rounded-md text-gray-800">{cnpj}</div>
+              ) : (
+                <Input 
+                  id="cnpj" 
+                  placeholder="00.000.000/0000-00" 
+                  value={cnpj}
+                  onChange={(e) => setCnpj(e.target.value)}
+                  required
+                />
+              )}
             </div>
             
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="endereco" className="text-right">
-                Endereço Completo
-              </Label>
-              <Input
-                id="endereco"
-                value={endereco}
-                onChange={(e) => setEndereco(e.target.value)}
-                className="col-span-3"
-              />
+            <div>
+              <Label htmlFor="localizacao">Cidade/Estado *</Label>
+              {isViewOnly ? (
+                <div className="p-2 bg-gray-100 rounded-md text-gray-800">{localizacao}</div>
+              ) : (
+                <Input 
+                  id="localizacao" 
+                  placeholder="Ex: São Paulo, SP" 
+                  value={localizacao}
+                  onChange={(e) => setLocalizacao(e.target.value)}
+                  required
+                />
+              )}
             </div>
             
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="status" className="text-right">
-                Status
-              </Label>
-              <Select 
-                value={status} 
-                onValueChange={setStatus}
-              >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Selecione o status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ativo">Ativo</SelectItem>
-                  <SelectItem value="inativo">Inativo</SelectItem>
-                  <SelectItem value="manutencao">Em Manutenção</SelectItem>
-                </SelectContent>
-              </Select>
+            <div>
+              <Label htmlFor="endereco">Endereço Completo *</Label>
+              {isViewOnly ? (
+                <div className="p-2 bg-gray-100 rounded-md text-gray-800">{endereco}</div>
+              ) : (
+                <Input 
+                  id="endereco" 
+                  placeholder="Ex: Av. Paulista, 1000 - Bela Vista" 
+                  value={endereco}
+                  onChange={(e) => setEndereco(e.target.value)}
+                  required
+                />
+              )}
             </div>
             
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="descricao" className="text-right">
-                Descrição
-              </Label>
-              <Textarea
-                id="descricao"
-                value={descricao}
-                onChange={(e) => setDescricao(e.target.value)}
-                className="col-span-3 resize-none h-20"
-              />
-            </div>
-          </TabsContent>
-          
-          {/* Aba: Dados Técnicos */}
-          <TabsContent value="tecnico" className="space-y-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="potencia" className="text-right">
-                Potência Instalada
-              </Label>
-              <Input
-                id="potencia"
-                value={potencia}
-                onChange={(e) => setPotencia(e.target.value)}
-                className="col-span-3"
-                placeholder="Ex: 500 kWp"
-              />
+            <div>
+              <Label htmlFor="email">Email de Acesso *</Label>
+              {isViewOnly ? (
+                <div className="p-2 bg-gray-100 rounded-md text-gray-800">{email}</div>
+              ) : (
+                <Input 
+                  id="email" 
+                  type="email"
+                  placeholder="email@exemplo.com" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              )}
             </div>
             
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="dataInstalacao" className="text-right">
-                Data de Instalação
-              </Label>
-              <Input
-                id="dataInstalacao"
-                type="date"
-                value={dataInstalacao}
-                onChange={(e) => setDataInstalacao(e.target.value)}
-                className="col-span-3"
-              />
+            <div>
+              <Label htmlFor="descricao">Descrição</Label>
+              {isViewOnly ? (
+                <div className="p-2 bg-gray-100 rounded-md text-gray-800 min-h-[80px]">{descricao || "Nenhuma descrição."}</div>
+              ) : (
+                <Textarea 
+                  id="descricao" 
+                  placeholder="Descreva detalhes sobre a usina geradora" 
+                  value={descricao}
+                  onChange={(e) => setDescricao(e.target.value)}
+                  className="resize-none h-20"
+                />
+              )}
             </div>
-            
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="marcaInversor" className="text-right">
-                Marca do Inversor
-              </Label>
-              <Select 
-                value={marcaInversor} 
-                onValueChange={setMarcaInversor}
-              >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Selecione a marca" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="fronius">Fronius</SelectItem>
-                  <SelectItem value="solar-edge">SolarEdge</SelectItem>
-                  <SelectItem value="growatt">Growatt</SelectItem>
-                  <SelectItem value="huawei">Huawei</SelectItem>
-                  <SelectItem value="outro">Outro</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="apiKey" className="text-right">
-                Chave da API
-              </Label>
-              <Input
-                id="apiKey"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                className="col-span-3"
-                placeholder="Chave para integração com o sistema do inversor"
-              />
-            </div>
-            
-            <div className="col-span-3 col-start-2 text-sm text-gray-500 mt-2">
-              <p>A chave da API é utilizada para integração com o sistema do fabricante do inversor.</p>
-            </div>
-          </TabsContent>
-        </Tabs>
-        
-        <DialogFooter className="flex justify-between">
-          <Button type="button" variant="destructive" onClick={handleDelete}>
-            Excluir
-          </Button>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={onClose}>
-              Cancelar
-            </Button>
-            <Button type="submit" onClick={handleSave}>
-              Salvar
-            </Button>
           </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          
+          <DialogFooter className="flex justify-between gap-3 mt-6">
+            {!isViewOnly && (
+              <Button 
+                variant="destructive" 
+                onClick={handleExcluir}
+                type="button"
+                className="flex items-center"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Excluir
+              </Button>
+            )}
+            
+            <div className="flex gap-3">
+              <DialogClose asChild>
+                <Button variant="outline">{isViewOnly ? "Fechar" : "Cancelar"}</Button>
+              </DialogClose>
+              {!isViewOnly && (
+                <Button className="bg-green-600 hover:bg-green-700" onClick={handleSalvar}>
+                  Salvar Alterações
+                </Button>
+              )}
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem certeza que deseja excluir esta usina?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. Isso excluirá permanentemente a usina {geradora?.nome || "selecionada"} do sistema.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmarExclusao} className="bg-red-600 hover:bg-red-700">Excluir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 

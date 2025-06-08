@@ -1,4 +1,4 @@
-import { supabase, checkSupabaseConnection } from '@/lib/supabase';
+import { db, collection, doc, setDoc, updateDoc, deleteDoc, getDoc } from '@/lib/firebase';
 import { useToast } from '@/components/ui/use-toast';
 
 // Tipos de operações que podem ser armazenadas no outbox
@@ -9,39 +9,54 @@ export interface PendingOperation {
   id: string;
   timestamp: number;
   type: OperationType;
-  table: string;
+  collection: string;
   data: Record<string, unknown>;
   entityId?: string;
 }
 
 // Chave para armazenar operações pendentes no localStorage
 const PENDING_OPERATIONS_KEY = 'pendingOperations';
-const SUPABASE_STATUS_KEY = 'supabaseStatus';
+const FIREBASE_STATUS_KEY = 'firebaseStatus';
 
 /**
- * Serviço para gerenciar a sincronização com o Supabase
+ * Função para verificar se o Firebase está disponível
+ */
+export async function checkFirebaseConnection(): Promise<boolean> {
+  try {
+    // Tentar acessar um documento para verificar a conexão
+    const testDocRef = doc(db, 'system', 'connection_test');
+    await getDoc(testDocRef);
+    return true;
+  } catch (error) {
+    console.error('Erro ao verificar conexão com Firebase:', error);
+    return false;
+  }
+}
+
+/**
+ * Serviço para gerenciar a sincronização com o Firebase
  */
 export const syncService = {
   /**
-   * Verifica se o Supabase está disponível
+   * Verifica se o Firebase está disponível
    */
   async checkConnection(): Promise<boolean> {
     try {
-      const isConnected = await checkSupabaseConnection();
-      localStorage.setItem(SUPABASE_STATUS_KEY, isConnected ? 'online' : 'offline');
+      const isConnected = await checkFirebaseConnection();
+      localStorage.setItem(FIREBASE_STATUS_KEY, isConnected ? 'online' : 'offline');
       return isConnected;
     } catch (error) {
-      console.error('Erro ao verificar conexão com Supabase:', error);
-      localStorage.setItem(SUPABASE_STATUS_KEY, 'offline');
+      console.error('Erro ao verificar conexão com Firebase:', error);
+      localStorage.setItem(FIREBASE_STATUS_KEY, 'offline');
       return false;
     }
   },
 
   /**
-   * Retorna o status atual do Supabase
+   * Retorna o status atual do Firebase
    */
   getStatus(): 'online' | 'offline' | 'unknown' {
-    return (localStorage.getItem(SUPABASE_STATUS_KEY) as 'online' | 'offline') || 'unknown';
+    return (localStorage.getItem(FIREBASE_STATUS_KEY) as 'online' | 'offline') || 'unknown';
   },
 
   /**
@@ -60,7 +75,7 @@ export const syncService = {
     localStorage.setItem(PENDING_OPERATIONS_KEY, JSON.stringify(pendingOperations));
     
     // Notificar o administrador
-    this.notifyAdmin('Operação armazenada localmente', `Uma operação ${operation.type} na tabela ${operation.table} foi armazenada localmente e será sincronizada quando o Supabase estiver disponível.`);
+    this.notifyAdmin('Operação armazenada localmente', `Uma operação ${operation.type} na coleção ${operation.collection} foi armazenada localmente e será sincronizada quando o Firebase estiver disponível.`);
   },
 
   /**
@@ -86,7 +101,7 @@ export const syncService = {
   },
 
   /**
-   * Sincroniza todas as operações pendentes com o Supabase
+   * Sincroniza todas as operações pendentes com o Firebase
    */
   async syncPendingOperations(): Promise<{ success: number; failed: number }> {
     const pendingOperations = this.getPendingOperations();
@@ -97,10 +112,10 @@ export const syncService = {
       return { success, failed };
     }
     
-    // Verificar se o Supabase está disponível
+    // Verificar se o Firebase está disponível
     const isConnected = await this.checkConnection();
     if (!isConnected) {
-      this.notifyAdmin('Sincronização falhou', 'Não foi possível sincronizar as operações pendentes porque o Supabase está indisponível.');
+      this.notifyAdmin('Sincronização falhou', 'Não foi possível sincronizar as operações pendentes porque o Firebase está indisponível.');
       return { success, failed };
     }
     
@@ -111,13 +126,27 @@ export const syncService = {
       try {
         switch (operation.type) {
           case 'create':
-            await supabase.from(operation.table).insert(operation.data);
+            if (operation.entityId) {
+              // Se tiver ID, usar setDoc para criar com ID específico
+              await setDoc(doc(db, operation.collection, operation.entityId), operation.data);
+            } else {
+              // Se não tiver ID, usar addDoc para gerar ID automático
+              const collectionRef = collection(db, operation.collection);
+              const docRef = doc(collectionRef);
+              await setDoc(docRef, operation.data);
+            }
             break;
           case 'update':
-            await supabase.from(operation.table).update(operation.data).eq('id', operation.entityId);
+            if (!operation.entityId) {
+              throw new Error('ID da entidade é obrigatório para operações de atualização');
+            }
+            await updateDoc(doc(db, operation.collection, operation.entityId), operation.data);
             break;
           case 'delete':
-            await supabase.from(operation.table).delete().eq('id', operation.entityId);
+            if (!operation.entityId) {
+              throw new Error('ID da entidade é obrigatório para operações de exclusão');
+            }
+            await deleteDoc(doc(db, operation.collection, operation.entityId));
             break;
         }
         

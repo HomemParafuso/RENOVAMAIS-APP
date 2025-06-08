@@ -1,5 +1,5 @@
-
 import React, { useState, useEffect } from "react";
+import { clienteService, ClienteApp } from "@/services/clienteService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MoreVertical, Search, Eye, Edit, Send } from "lucide-react";
@@ -22,37 +22,75 @@ import {
   TableRow 
 } from "@/components/ui/table";
 
-interface Cliente {
-  id: number;
-  nome: string;
-  cpf: string;
-  tipoCalculo: string;
-  status: string;
-  usina: string;
-}
-
 const ClientesPage = () => {
-  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [clientes, setClientes] = useState<ClienteApp[]>([]);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isNovoClienteModalOpen, setIsNovoClienteModalOpen] = useState(false);
-  const [clienteSelecionado, setClienteSelecionado] = useState<Cliente | undefined>(undefined);
+  const [clienteSelecionado, setClienteSelecionado] = useState<ClienteApp | undefined>(undefined);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc" | null>(null);
   const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [clienteParaExcluir, setClienteParaExcluir] = useState<ClienteApp | null>(null);
   const { toast } = useToast();
 
-  // Carregar clientes do localStorage
+  // Carregar clientes do Firebase
   useEffect(() => {
-    const clientesSalvos = JSON.parse(localStorage.getItem('clientes') || '[]');
-    setClientes(clientesSalvos);
-    console.log('Clientes carregados:', clientesSalvos);
+    const carregarClientes = async () => {
+      try {
+        const clientesCarregados = await clienteService.getAll();
+        setClientes(clientesCarregados);
+        console.log('Clientes carregados:', clientesCarregados);
+      } catch (error) {
+        console.error('Erro ao carregar clientes:', error);
+        toast({
+          title: "Erro ao carregar clientes",
+          description: "Ocorreu um erro ao carregar a lista de clientes.",
+          variant: "destructive",
+        });
+      }
+    };
+    
+    carregarClientes();
   }, [isNovoClienteModalOpen]); // Recarregar quando modal fechar
 
-  const handleEnviarConvite = (cliente: Cliente) => {
+  const handleEnviarConvite = (cliente: ClienteApp) => {
     toast({
       title: "Convite enviado",
       description: "O convite foi enviado para o cliente com sucesso!",
     });
+  };
+
+  const handleExcluirCliente = async (cliente: ClienteApp) => {
+    setClienteParaExcluir(cliente);
+    
+    // Confirmar exclusão
+    if (confirm(`Tem certeza que deseja excluir o cliente ${cliente.nome}? Esta ação apenas ocultará o cliente da visualização, mas manterá os dados financeiros históricos e faturas na base.`)) {
+      try {
+        // Chamar o serviço para excluir o cliente do localStorage e do Firebase
+        const sucesso = await clienteService.delete(cliente.id);
+        
+        if (sucesso) {
+          // Atualizar a lista de clientes (removendo o cliente excluído)
+          const clientesAtualizados = clientes.filter(c => c.id !== cliente.id);
+          setClientes(clientesAtualizados);
+          
+          // Notificar o usuário
+          toast({
+            title: "Cliente excluído",
+            description: `O cliente ${cliente.nome} foi excluído com sucesso.`,
+          });
+        } else {
+          throw new Error('Não foi possível excluir o cliente');
+        }
+      } catch (error) {
+        console.error('Erro ao excluir cliente:', error);
+        toast({
+          title: "Erro ao excluir cliente",
+          description: "Ocorreu um erro ao excluir o cliente.",
+          variant: "destructive",
+        });
+      }
+    }
   };
   
   const handleSort = (column: string) => {
@@ -74,8 +112,8 @@ const ClientesPage = () => {
   const sortedClientes = [...clientes].sort((a, b) => {
     if (!sortColumn || !sortDirection) return 0;
     
-    const aValue = a[sortColumn as keyof Cliente];
-    const bValue = b[sortColumn as keyof Cliente];
+    const aValue = a[sortColumn as keyof ClienteApp];
+    const bValue = b[sortColumn as keyof ClienteApp];
     
     if (typeof aValue === 'string' && typeof bValue === 'string') {
       return sortDirection === "asc" 
@@ -86,12 +124,12 @@ const ClientesPage = () => {
     return 0;
   });
   
-  const handleViewClient = (cliente: Cliente) => {
+  const handleViewClient = (cliente: ClienteApp) => {
     setClienteSelecionado(cliente);
     setIsViewModalOpen(true);
   };
   
-  const handleEditClient = (cliente: Cliente) => {
+  const handleEditClient = (cliente: ClienteApp) => {
     setClienteSelecionado(cliente);
     setIsEditModalOpen(true);
   };
@@ -178,42 +216,47 @@ const ClientesPage = () => {
             </TableHeader>
             <TableBody>
               {sortedClientes.map((cliente) => (
-                <TableRow key={cliente.id}>
-                  <TableCell className="py-4">
-                    <div className="flex items-center">
-                      <div className="h-8 w-8 bg-green-100 text-green-600 rounded-full flex items-center justify-center font-medium mr-3">
-                        {cliente.nome.charAt(0)}
+                <TableRow key={cliente.id} onClick={() => handleViewClient(cliente)} className="cursor-pointer hover:bg-gray-50">
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center text-green-700 text-sm font-semibold">
+                        {cliente.nome.charAt(0).toUpperCase()}
                       </div>
-                      <span className="font-medium">{cliente.nome}</span>
+                      {cliente.nome}
                     </div>
                   </TableCell>
-                  <TableCell>{cliente.cpf || '-'}</TableCell>
-                  <TableCell>{cliente.tipoCalculo}</TableCell>
-                  <TableCell>{cliente.usina}</TableCell>
+                  <TableCell>{cliente.cpf}</TableCell>
+                  <TableCell>{cliente.tipoCalculo === 'percentual' ? 'Percentual de Economia' : 'Valor Nominal'}</TableCell>
+                  <TableCell>{cliente.usinaNome || 'N/A'}</TableCell>
                   <TableCell>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      cliente.status === 'ativo' ? 'bg-green-100 text-green-800' :
+                      cliente.status === 'pendente' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
                       {cliente.status}
                     </span>
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreVertical className="h-5 w-5" />
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">Abrir menu</span>
+                          <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => handleViewClient(cliente)}>
-                          <Eye className="h-4 w-4 mr-2" />
-                          Ver Detalhes
+                          <Eye className="mr-2 h-4 w-4" /> Visualizar
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleEditClient(cliente)}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Editar
+                          <Edit className="mr-2 h-4 w-4" /> Editar
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleEnviarConvite(cliente)}>
-                          <Send className="h-4 w-4 mr-2" />
-                          Enviar Convite
+                          <Send className="mr-2 h-4 w-4" /> Enviar Convite
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleExcluirCliente(cliente)}>
+                          <span className="text-red-600">Excluir</span>
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -225,25 +268,38 @@ const ClientesPage = () => {
         )}
       </div>
 
-      {clienteSelecionado && (
-        <>
-          <EditarClienteModal 
-            isOpen={isViewModalOpen}
-            onClose={() => setIsViewModalOpen(false)}
-            isViewOnly={true}
-          />
+      {/* Modal para Editar Cliente */}
+      <EditarClienteModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setClienteSelecionado(undefined);
+          // Recarregar clientes após edição
+          clienteService.getAll().then(setClientes);
+        }}
+        clienteId={clienteSelecionado?.id}
+      />
 
-          <EditarClienteModal 
-            isOpen={isEditModalOpen} 
-            onClose={() => setIsEditModalOpen(false)}
-            isViewOnly={false}
-          />
-        </>
-      )}
-      
+      {/* Modal para Visualizar Cliente (reutilizando EditarClienteModal em modo somente leitura) */}
+      <EditarClienteModal
+        isOpen={isViewModalOpen}
+        onClose={() => {
+          setIsViewModalOpen(false);
+          setClienteSelecionado(undefined);
+        }}
+        clienteId={clienteSelecionado?.id}
+        isViewOnly={true}
+      />
+
+      {/* Modal para Novo Cliente */}
       <NovoClienteModal
         isOpen={isNovoClienteModalOpen}
         onClose={() => setIsNovoClienteModalOpen(false)}
+        onSave={() => {
+          // Recarregar clientes após adicionar um novo
+          clienteService.getAll().then(setClientes);
+          setIsNovoClienteModalOpen(false);
+        }}
       />
     </div>
   );

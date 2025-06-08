@@ -1,5 +1,4 @@
-
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -8,7 +7,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Search, MoreVertical, Eye, Edit, Bell, Download, QrCode, Share2, Upload, FileText } from "lucide-react";
+import { Search, MoreVertical, Eye, Edit, Bell, Download, QrCode, Share2, Upload, FileText, Trash2, RefreshCcw, AlertCircle } from "lucide-react";
+import { faturaService } from "@/services/faturaService";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import NovaFaturaModal from "@/components/fatura/NovaFaturaModal";
 import DetalheFaturaModal from "@/components/fatura/DetalheFaturaModal";
@@ -55,25 +55,53 @@ const FaturasPage = () => {
   const [isDetalhesFaturaModalOpen, setIsDetalhesFaturaModalOpen] = useState(false);
   const [isQrCodeModalOpen, setIsQrCodeModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [isExcluirModalOpen, setIsExcluirModalOpen] = useState(false);
   const [faturaAtual, setFaturaAtual] = useState<Fatura | undefined>(undefined);
   const [faturaPreview, setFaturaPreview] = useState<Partial<Fatura> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const [filtroStatus, setFiltroStatus] = useState<string>("todos-status");
+  const [faturas, setFaturas] = useState<Fatura[]>([]);
 
-  const faturas: Fatura[] = [
-    {
-      id: 1,
-      cliente: "Pablio Tacyanno",
-      referencia: "05/2025",
-      vencimento: "10/05/2025",
-      valor: "R$ 150,00",
-      status: "Pendente",
-      notificado: false,
-      endereco: "Rua das Flores, 123 - Centro",
-      leituraAnterior: 1200,
-      leituraAtual: 1350
+  // Carregar faturas do localStorage na inicialização
+  useEffect(() => {
+    const faturasArmazenadas = localStorage.getItem('faturas');
+    
+    if (faturasArmazenadas) {
+      setFaturas(JSON.parse(faturasArmazenadas));
+    } else {
+      // Dados iniciais se não houver nada no localStorage
+      const dadosIniciais = [
+        {
+          id: 1,
+          cliente: "João Silva",
+          referencia: "05/2025",
+          vencimento: "10/05/2025",
+          valor: "R$ 350,00",
+          status: "Pago",
+          notificado: true,
+          endereco: "Av. Principal, 123 - Centro",
+          leituraAnterior: 1200,
+          leituraAtual: 1650
+        },
+        {
+          id: 2,
+          cliente: "Maria Santos",
+          referencia: "04/2025",
+          vencimento: "05/04/2025",
+          valor: "R$ 280,00",
+          status: "Estornada",
+          notificado: true,
+          endereco: "Rua das Flores, 45 - Jardim",
+          leituraAnterior: 950,
+          leituraAtual: 1320
+        }
+      ];
+      
+      setFaturas(dadosIniciais);
+      localStorage.setItem('faturas', JSON.stringify(dadosIniciais));
     }
-  ];
+  }, []);
 
   const handleVerDetalhes = (fatura: Fatura) => {
     setFaturaAtual(fatura);
@@ -113,44 +141,108 @@ const FaturasPage = () => {
       description: `A fatura de ${fatura.referencia} está pronta para ser compartilhada.`,
     });
   };
+
+  const handleEstornarPagamento = (fatura: Fatura) => {
+    setFaturaAtual(fatura);
+    setIsExcluirModalOpen(true);
+  };
+
+  // Filtra as faturas com base no status selecionado
+  const faturasFiltradas = useMemo(() => {
+    if (filtroStatus === "todos-status") {
+      return faturas.filter(fatura => fatura.status !== "Estornada");
+    } else if (filtroStatus === "estornada") {
+      return faturas.filter(fatura => fatura.status === "Estornada");
+    } else {
+      return faturas.filter(fatura => fatura.status === filtroStatus);
+    }
+  }, [faturas, filtroStatus]);
+
+  // Salvar faturas no localStorage sempre que forem alteradas
+  useEffect(() => {
+    if (faturas.length > 0) {
+      localStorage.setItem('faturas', JSON.stringify(faturas));
+    }
+  }, [faturas]);
+
+  const confirmarEstorno = () => {
+    if (!faturaAtual) return;
+    
+    // Em um sistema real, registraríamos o estorno no banco de dados
+    // Aqui apenas simulamos a operação alterando o status da fatura
+    const faturasAtualizadas = faturas.map(fatura => 
+      fatura.id === faturaAtual.id 
+        ? { ...fatura, status: "Estornada" } 
+        : fatura
+    );
+    
+    // Atualiza o estado e salva no localStorage
+    setFaturas(faturasAtualizadas);
+    localStorage.setItem('faturas', JSON.stringify(faturasAtualizadas));
+    
+    toast({
+      title: "Pagamento estornado",
+      description: `O pagamento da fatura de ${faturaAtual.referencia} foi estornado com sucesso. Lembre-se de processar a devolução pelo sistema bancário.`,
+    });
+    
+    setIsExcluirModalOpen(false);
+    setFaturaAtual(undefined);
+  };
   
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processError, setProcessError] = useState<string | null>(null);
+  
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
     
-    // Em um sistema real, aqui faríamos o upload e processamento do arquivo
-    // Para simular, vamos criar uma prévia de fatura
-    
-    // Simular extração de dados do PDF
-    setTimeout(() => {
-      // Dados simulados que seriam extraídos do arquivo
-      const dadosExtraidos = {
-        cliente: "Pablio Tacyanno",
-        referencia: "06/2025",
-        vencimento: "15/06/2025",
-        endereco: "Rua das Flores, 123 - Centro",
-        leituraAnterior: 1350,
-        leituraAtual: 1480
-      };
-      
-      // Calcular valor baseado na leitura
-      const consumo = dadosExtraidos.leituraAtual - dadosExtraidos.leituraAnterior;
-      const valorKwh = 0.75; // R$ por kWh, em um sistema real viria da configuração do cliente
-      const valorCalculado = (consumo * valorKwh).toFixed(2);
-      
-      setFaturaPreview({
-        ...dadosExtraidos,
-        valor: `R$ ${valorCalculado}`,
-        status: "Pendente",
-      });
-      
-      setIsUploadModalOpen(true);
-    }, 1500);
+    setIsProcessing(true);
+    setProcessError(null);
     
     toast({
       title: "Processando arquivo",
       description: "Analisando dados da fatura...",
     });
+    
+    try {
+      // Processar o arquivo usando o faturaService
+      const { dadosFatura, cliente, resultado } = await faturaService.processarFatura(file);
+      
+      if (!dadosFatura) {
+        throw new Error("Não foi possível extrair dados da fatura");
+      }
+      
+      // Criar prévia da fatura com os dados extraídos
+      const faturaData: Partial<Fatura> = {
+        cliente: cliente?.nome || "Cliente não identificado",
+        referencia: dadosFatura.referencia || "",
+        vencimento: dadosFatura.vencimento || "",
+        endereco: "Endereço extraído da fatura",
+        leituraAnterior: dadosFatura.leituraAnterior,
+        leituraAtual: dadosFatura.leituraAtual,
+        valor: resultado ? `R$ ${resultado.valorFinal.toFixed(2)}` : "Valor não calculado",
+        status: "Pendente"
+      };
+      
+      setFaturaPreview(faturaData);
+      setIsUploadModalOpen(true);
+      
+      toast({
+        title: "Arquivo processado",
+        description: "Os dados da fatura foram extraídos com sucesso.",
+      });
+    } catch (error) {
+      console.error("Erro ao processar fatura:", error);
+      setProcessError("Ocorreu um erro ao processar o arquivo. Tente novamente ou insira os dados manualmente.");
+      
+      toast({
+        title: "Erro no processamento",
+        description: "Não foi possível processar o arquivo da fatura.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
   
   // Schema para o formulário de confirmação
@@ -247,15 +339,20 @@ const FaturasPage = () => {
             className="pl-10"
           />
         </div>
-        <Select defaultValue="todos-status">
+        <Select 
+          defaultValue="todos-status" 
+          value={filtroStatus}
+          onValueChange={setFiltroStatus}
+        >
           <SelectTrigger className="w-[200px]">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="todos-status">Todos os Status</SelectItem>
+            <SelectItem value="todos-status">Ativos</SelectItem>
             <SelectItem value="pago">Pago</SelectItem>
             <SelectItem value="pendente">Pendente</SelectItem>
             <SelectItem value="atrasado">Atrasado</SelectItem>
+            <SelectItem value="estornada">Estornada</SelectItem>
           </SelectContent>
         </Select>
         <Select defaultValue="todos-clientes">
@@ -280,14 +377,26 @@ const FaturasPage = () => {
           <div className="text-right">Ações</div>
         </div>
         
-        {faturas.map((fatura) => (
-          <div key={fatura.id} className="grid grid-cols-7 px-6 py-4 border-b last:border-0 items-center">
+        {faturasFiltradas.map((fatura) => (
+          <div 
+            key={fatura.id} 
+            className="grid grid-cols-7 px-6 py-4 border-b last:border-0 items-center cursor-pointer hover:bg-gray-50"
+            onClick={() => handleVerDetalhes(fatura)}
+          >
             <div>{fatura.cliente}</div>
             <div>{fatura.referencia || '-'}</div>
             <div>{fatura.vencimento}</div>
             <div>{fatura.valor}</div>
             <div>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                fatura.status === 'Pago' 
+                  ? 'bg-green-100 text-green-800' 
+                  : fatura.status === 'Pendente' 
+                    ? 'bg-yellow-100 text-yellow-800' 
+                    : fatura.status === 'Estornada'
+                      ? 'bg-purple-100 text-purple-800'
+                      : 'bg-red-100 text-red-800'
+              }`}>
                 {fatura.status}
               </span>
             </div>
@@ -300,33 +409,33 @@ const FaturasPage = () => {
             </div>
             <div className="text-right">
               <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                   <Button variant="ghost" size="icon">
                     <MoreVertical className="h-5 w-5" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => handleVerDetalhes(fatura)}>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleVerDetalhes(fatura); }}>
                     <Eye className="h-4 w-4 mr-2" />
                     Ver Detalhes
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleNotificarCliente(fatura)}>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleNotificarCliente(fatura); }}>
                     <Bell className="h-4 w-4 mr-2" />
                     Notificar Cliente
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleDownloadFatura(fatura)}>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDownloadFatura(fatura); }}>
                     <Download className="h-4 w-4 mr-2" />
                     Download Fatura
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleEditarFatura(fatura)}>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditarFatura(fatura); }}>
                     <Edit className="h-4 w-4 mr-2" />
                     Editar
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleGerarQRCode(fatura)}>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleGerarQRCode(fatura); }}>
                     <QrCode className="h-4 w-4 mr-2" />
                     Gerar QR Code
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleCompartilharFatura(fatura)}>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCompartilharFatura(fatura); }}>
                     <Share2 className="h-4 w-4 mr-2" />
                     Compartilhar
                   </DropdownMenuItem>
@@ -364,7 +473,28 @@ const FaturasPage = () => {
             </DialogDescription>
           </DialogHeader>
           
-          <Form {...form}>
+          {isProcessing && (
+            <div className="flex flex-col items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mb-4"></div>
+              <p className="text-gray-600">Processando arquivo...</p>
+              <p className="text-xs text-gray-500 mt-1">Extraindo dados e calculando valores</p>
+            </div>
+          )}
+          
+          {processError && (
+            <div className="mt-4 p-4 bg-red-50 border border-red-100 rounded-md">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="h-5 w-5 text-red-500 mt-0.5" />
+                <div>
+                  <h4 className="text-sm font-medium text-red-800">Erro no processamento</h4>
+                  <p className="text-xs text-red-700 mt-1">{processError}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {!isProcessing && !processError && (
+            <Form {...form}>
             <form onSubmit={form.handleSubmit(handleConfirmarFatura)} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <FormField
@@ -487,6 +617,52 @@ const FaturasPage = () => {
               </DialogFooter>
             </form>
           </Form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de confirmação de exclusão */}
+      <Dialog open={isExcluirModalOpen} onOpenChange={setIsExcluirModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Confirmar estorno de pagamento</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja estornar o pagamento desta fatura? Esta ação alterará o balanço financeiro da empresa e a devolução ao cliente deverá ser processada manualmente pelo sistema bancário.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {faturaAtual && (
+            <div className="py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Cliente</p>
+                  <p className="text-sm">{faturaAtual.cliente}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Referência</p>
+                  <p className="text-sm">{faturaAtual.referencia}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Vencimento</p>
+                  <p className="text-sm">{faturaAtual.vencimento}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Valor</p>
+                  <p className="text-sm">{faturaAtual.valor}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsExcluirModalOpen(false)}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={confirmarEstorno}>
+              <RefreshCcw className="h-4 w-4 mr-2" />
+              Estornar Pagamento
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

@@ -1,7 +1,17 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { AdminUser } from '../types';
-import { supabase } from '@/lib/supabase';
+import { 
+  auth, 
+  db, 
+  signInWithEmailAndPassword, 
+  signOut, 
+  onAuthStateChanged,
+  collection,
+  query,
+  where,
+  getDocs
+} from '@/lib/firebase';
 
 interface AdminAuthContextType {
   user: AdminUser | null;
@@ -19,76 +29,73 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
 
   // Verificar se o usuário já está autenticado
   useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session) {
-          const { user } = session;
-          
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        try {
           // Verificar se o usuário é um administrador
-          const { data: adminData, error: adminError } = await supabase
-            .from('users')
-            .select('*')
-            .eq('email', user.email)
-            .eq('role', 'admin')
-            .single();
-            
-          if (adminData && !adminError) {
+          const usersRef = collection(db, 'users');
+          const q = query(
+            usersRef, 
+            where('email', '==', firebaseUser.email),
+            where('role', '==', 'admin')
+          );
+          
+          const querySnapshot = await getDocs(q);
+          
+          if (!querySnapshot.empty) {
+            // Usuário é um administrador
             const adminUser: AdminUser = {
-              email: user.email || '',
+              email: firebaseUser.email || '',
               password: '',
               isAuthenticated: true
             };
             setUser(adminUser);
+          } else {
+            // Não é um administrador, fazer logout
+            await signOut(auth);
+            setUser(null);
           }
+        } catch (error) {
+          console.error('Erro ao verificar permissões de administrador:', error);
+          setUser(null);
         }
-      } catch (error) {
-        console.error('Erro ao verificar sessão:', error);
-      } finally {
-        setLoading(false);
+      } else {
+        setUser(null);
       }
-    };
+      
+      setLoading(false);
+    });
     
-    checkSession();
+    // Limpar o listener quando o componente for desmontado
+    return () => unsubscribe();
   }, []);
 
-  // Função de login usando Supabase
+  // Função de login usando Firebase
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
       setLoading(true);
       
-      // Autenticar com Supabase
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
+      // Autenticar com Firebase
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
       
-      if (error) throw error;
-      
-      if (data.user) {
+      if (userCredential.user) {
         // Verificar se o usuário é um administrador
-        const { data: adminData, error: adminError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('email', email)
-          .eq('role', 'admin')
-          .single();
-          
-        if (adminError || !adminData) {
+        const usersRef = collection(db, 'users');
+        const q = query(
+          usersRef, 
+          where('email', '==', email),
+          where('role', '==', 'admin')
+        );
+        
+        const querySnapshot = await getDocs(q);
+        
+        if (querySnapshot.empty) {
           // Se não for admin, fazer logout
-          await supabase.auth.signOut();
+          await signOut(auth);
           return false;
         }
         
-        // Se for admin, salvar no estado
-        const adminUser: AdminUser = {
-          email,
-          password: '',
-          isAuthenticated: true
-        };
-        
-        setUser(adminUser);
+        // Se for admin, salvar no estado (o useEffect já vai cuidar disso)
         return true;
       }
       
@@ -101,11 +108,11 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
     }
   };
 
-  // Função de logout usando Supabase
+  // Função de logout usando Firebase
   const logout = async () => {
     try {
       setLoading(true);
-      await supabase.auth.signOut();
+      await signOut(auth);
       setUser(null);
     } catch (error) {
       console.error('Erro ao fazer logout:', error);

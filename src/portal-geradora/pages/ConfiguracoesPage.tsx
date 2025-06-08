@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,6 +48,7 @@ interface ConfiguracaoNotificacoes {
 const ConfiguracoesPage = () => {
   const { toast } = useToast();
   const [isPixConfigModalOpen, setIsPixConfigModalOpen] = useState(false);
+  const [pixConfigData, setPixConfigData] = useState<any | null>(null);
   
   // Estados para configurações
   const [configGeral, setConfigGeral] = useState<ConfiguracaoGeral>({
@@ -88,6 +88,12 @@ const ConfiguracoesPage = () => {
     const loadedConfigNotificacoes = localStorage.getItem('configNotificacoes');
     if (loadedConfigNotificacoes) {
       setConfigNotificacoes(JSON.parse(loadedConfigNotificacoes));
+    }
+    
+    // Carregar configuração PIX ao iniciar
+    const loadedPixConfig = localStorage.getItem('pixConfig');
+    if (loadedPixConfig) {
+      setPixConfigData(JSON.parse(loadedPixConfig));
     }
   }, []);
 
@@ -136,6 +142,32 @@ const ConfiguracoesPage = () => {
 
   const handleOpenPixConfig = () => {
     setIsPixConfigModalOpen(true);
+  };
+
+  const handleViewPixConfig = () => {
+    const loadedPixConfig = localStorage.getItem('pixConfig');
+    if (loadedPixConfig) {
+      const config = JSON.parse(loadedPixConfig);
+      setPixConfigData(config);
+      toast({
+        title: "Configuração PIX Atual",
+        description: (
+          <div className="mt-2 text-sm">
+            <p><strong>Banco:</strong> {config.banco || 'Não configurado'}</p>
+            <p><strong>Tipo de Chave:</strong> {config.tipoChave || 'Não configurado'}</p>
+            <p><strong>Chave:</strong> {config.chave || 'Não configurado'}</p>
+          </div>
+        ),
+        duration: 5000,
+      });
+    } else {
+      toast({
+        title: "Configuração PIX não encontrada",
+        description: "Nenhuma configuração PIX salva ainda. Por favor, configure o PIX primeiro.",
+        variant: "warning",
+      });
+      setPixConfigData(null);
+    }
   };
 
   return (
@@ -366,28 +398,40 @@ const ConfiguracoesPage = () => {
                   <h3 className="font-medium">Configurar PIX</h3>
                   <p className="text-sm text-muted-foreground">Integração com sistema de pagamentos PIX</p>
                 </div>
-                <Button variant="outline" onClick={handleOpenPixConfig}>Configurar</Button>
+                <div className="flex gap-2">
+                  <Button variant="secondary" onClick={handleViewPixConfig}>Ver Configuração</Button>
+                  <Button variant="outline" onClick={handleOpenPixConfig}>Configurar</Button>
+                </div>
               </div>
               <div className="flex items-center justify-between py-3 border-b">
                 <div>
                   <h3 className="font-medium">API de Pagamentos</h3>
                   <p className="text-sm text-muted-foreground">Integração para processamento de pagamentos</p>
                 </div>
-                <Button variant="outline">Configurar</Button>
+                <div className="flex gap-2">
+                  <Button variant="secondary" onClick={() => toast({ title: "Funcionalidade em desenvolvimento", description: "A visualização da configuração da API de Pagamentos será implementada em breve." })}>Ver Configuração</Button>
+                  <Button variant="outline">Configurar</Button>
+                </div>
               </div>
               <div className="flex items-center justify-between py-3 border-b">
                 <div>
                   <h3 className="font-medium">Monitoramento de Geração</h3>
                   <p className="text-sm text-muted-foreground">Integração com sistema de monitoramento solar</p>
                 </div>
-                <Button variant="outline">Configurar</Button>
+                <div className="flex gap-2">
+                  <Button variant="secondary" onClick={() => toast({ title: "Funcionalidade em desenvolvimento", description: "A visualização da configuração de Monitoramento de Geração será implementada em breve." })}>Ver Configuração</Button>
+                  <Button variant="outline">Configurar</Button>
+                </div>
               </div>
               <div className="flex items-center justify-between py-3">
                 <div>
                   <h3 className="font-medium">Exportação Contábil</h3>
                   <p className="text-sm text-muted-foreground">Integração com sistema contábil</p>
                 </div>
-                <Button variant="outline">Configurar</Button>
+                <div className="flex gap-2">
+                  <Button variant="secondary" onClick={() => toast({ title: "Funcionalidade em desenvolvimento", description: "A visualização da configuração de Exportação Contábil será implementada em breve." })}>Ver Configuração</Button>
+                  <Button variant="outline">Configurar</Button>
+                </div>
               </div>
             </CardContent>
           </Card>

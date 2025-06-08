@@ -2,10 +2,27 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { LogOut, User } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const AdminHeader = () => {
-  const { user, logout } = useAdminAuth();
+  const { user, logout: adminLogout } = useAdminAuth();
+  const { logout: authLogout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      // Executar logout em ambos os contextos
+      await adminLogout();
+      await authLogout();
+      
+      // Forçar redirecionamento para a página inicial
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+    }
+  };
 
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4">
@@ -23,7 +40,7 @@ const AdminHeader = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={logout}
+            onClick={handleLogout}
             className="flex items-center"
           >
             <LogOut className="h-4 w-4 mr-2" />

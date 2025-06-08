@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Dialog,
@@ -76,16 +75,26 @@ const PixConfigModal = ({ isOpen, onClose }: PixConfigModalProps) => {
                 <SelectValue placeholder="Selecione o banco" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="001">Banco do Brasil</SelectItem>
-                <SelectItem value="104">Caixa Econômica Federal</SelectItem>
-                <SelectItem value="237">Bradesco</SelectItem>
-                <SelectItem value="341">Itaú</SelectItem>
-                <SelectItem value="033">Santander</SelectItem>
-                <SelectItem value="260">Nubank</SelectItem>
-                <SelectItem value="077">Inter</SelectItem>
-                <SelectItem value="655">Votorantim</SelectItem>
-                <SelectItem value="212">Banco Original</SelectItem>
-                <SelectItem value="336">C6 Bank</SelectItem>
+                {[
+                  { value: "001", label: "Banco do Brasil" },
+                  { value: "104", label: "Caixa Econômica Federal" },
+                  { value: "237", label: "Bradesco" },
+                  { value: "341", label: "Itaú" },
+                  { value: "077", label: "Inter" },
+                  { value: "260", label: "Nubank" },
+                  { value: "033", label: "Santander" },
+                  { value: "748", label: "Sicredi" },
+                  { value: "756", label: "Sicoob" },
+                  { value: "655", label: "Votorantim" },
+                  { value: "212", label: "Banco Original" },
+                  { value: "336", label: "C6 Bank" },
+                ]
+                  .sort((a, b) => a.label.localeCompare(b.label))
+                  .map((bank) => (
+                    <SelectItem key={bank.value} value={bank.value}>
+                      {bank.label}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>

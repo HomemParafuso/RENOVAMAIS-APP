@@ -10,148 +10,153 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Search, MoreVertical, Eye, Edit, Users, Zap } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import NovaGeradoraModal from "@/components/geradora/NovaGeradoraModal";
+import NovaUsinaModal from "@/components/geradora/NovaUsinaModal";
 import DetalhesUsinaModal from "@/components/geradora/DetalhesUsinaModal";
 import EditarUsinaModal from "@/components/geradora/EditarUsinaModal";
 import GerenciarClientesUsinaModal from "@/components/geradora/GerenciarClientesUsinaModal";
 import { useToast } from "@/components/ui/use-toast";
-
-interface UsinaGeradora {
-  id: number;
-  nome: string;
-  potencia: string;
-  localizacao: string;
-  endereco?: string;
-  cnpj?: string;
-  status: string;
-  clientesVinculados: number;
-  marcaInversor?: string;
-  apiKey?: string;
-  descricao?: string;
-  dataInstalacao?: string;
-  dataCadastro?: string;
-}
+import { UsinaGeradora } from "@/portal-admin/types/usinaGeradora";
+import { usinaService } from "@/services/usinaService";
+import { useGeradoraAuth } from "@/context/GeradoraAuthContext";
 
 const GeradorasPage = () => {
   const [isDetalheGeradoraModalOpen, setIsDetalheGeradoraModalOpen] = useState(false);
-  const [isNovaGeradoraModalOpen, setIsNovaGeradoraModalOpen] = useState(false);
+  const [isNovaUsinaModalOpen, setIsNovaUsinaModalOpen] = useState(false);
   const [isEditarGeradoraModalOpen, setIsEditarGeradoraModalOpen] = useState(false);
   const [isGerenciarClientesModalOpen, setIsGerenciarClientesModalOpen] = useState(false);
-  const [geradoraSelecionada, setGeradoraSelecionada] = useState<UsinaGeradora | undefined>(undefined);
-  const [geradoras, setGeradoras] = useState<UsinaGeradora[]>([]);
+  const [usinaSelecionada, setUsinaSelecionada] = useState<UsinaGeradora | undefined>(undefined);
+  const [usinas, setUsinas] = useState<UsinaGeradora[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { geradora } = useGeradoraAuth();
 
-  // Carregar geradoras do localStorage ao iniciar
+  // Carregar usinas geradoras da geradora logada
   useEffect(() => {
-    const geradorasSalvas = localStorage.getItem('geradoras');
-    if (geradorasSalvas) {
+    const carregarUsinas = async () => {
+      setLoading(true);
       try {
-        setGeradoras(JSON.parse(geradorasSalvas));
+        if (geradora?.id) {
+          const usinasGeradora = await usinaService.getByGeradora(geradora.id);
+          setUsinas(usinasGeradora);
+          console.log("Usinas carregadas:", usinasGeradora);
+        } else {
+          console.log("Geradora não está logada ou não tem ID");
+          setUsinas([]);
+        }
       } catch (error) {
-        console.error("Erro ao carregar geradoras:", error);
-        // Inicializar com dado padrão se houver erro
-        setGeradoras([{
-          id: 1,
-          nome: "Usina Solar São Paulo I",
-          potencia: "500 kWp",
-          localizacao: "São Paulo, SP",
-          status: "Ativo",
-          clientesVinculados: 25,
-          marcaInversor: "fronius",
-          apiKey: "api123456"
-        }]);
+        console.error("Erro ao carregar usinas:", error);
+        toast({
+          title: "Erro ao carregar usinas",
+          description: "Não foi possível carregar as usinas geradoras. Tente novamente mais tarde.",
+          variant: "destructive"
+        });
+        setUsinas([]);
+      } finally {
+        setLoading(false);
       }
-    } else {
-      // Inicializar com dado padrão se não houver nada salvo
-      setGeradoras([{
-        id: 1,
-        nome: "Usina Solar São Paulo I",
-        potencia: "500 kWp",
-        localizacao: "São Paulo, SP",
-        status: "Ativo",
-        clientesVinculados: 25,
-        marcaInversor: "fronius",
-        apiKey: "api123456"
-      }]);
-    }
-  }, []);
+    };
 
-  // Salvar geradoras no localStorage sempre que houver mudanças
-  useEffect(() => {
-    if (geradoras.length > 0) {
-      localStorage.setItem('geradoras', JSON.stringify(geradoras));
-      console.log("Geradoras salvas no localStorage:", geradoras);
-    }
-  }, [geradoras]);
+    carregarUsinas();
+  }, [geradora]);
 
-  // Filtragem de geradoras
-  const geradorasFiltradas = geradoras.filter(geradora => {
+  // Filtragem de usinas
+  const usinasFiltradas = usinas.filter(usina => {
     // Filtro de busca por nome ou localização
     const matchesSearch = searchTerm === "" || 
-      geradora.nome.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      geradora.localizacao.toLowerCase().includes(searchTerm.toLowerCase());
+      usina.nome.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      usina.localizacao.toLowerCase().includes(searchTerm.toLowerCase());
     
     // Filtro de status
     const matchesStatus = statusFilter === "todos" || 
-      geradora.status.toLowerCase() === statusFilter.toLowerCase();
+      usina.status.toLowerCase() === statusFilter.toLowerCase();
     
     return matchesSearch && matchesStatus;
   });
 
-  const handleVerDetalhes = (geradora: UsinaGeradora) => {
-    setGeradoraSelecionada(geradora);
+  const handleVerDetalhes = (usina: UsinaGeradora) => {
+    setUsinaSelecionada(usina);
     setIsDetalheGeradoraModalOpen(true);
   };
 
-  const handleEditar = (geradora: UsinaGeradora) => {
-    console.log("Editando geradora:", geradora);
-    setGeradoraSelecionada({...geradora});
+  const handleEditar = (usina: UsinaGeradora) => {
+    console.log("Editando usina:", usina);
+    setUsinaSelecionada({...usina});
     setIsEditarGeradoraModalOpen(true);
   };
 
-  const handleGerenciarClientes = (geradora: UsinaGeradora) => {
-    setGeradoraSelecionada(geradora);
+  const handleGerenciarClientes = (usina: UsinaGeradora) => {
+    setUsinaSelecionada(usina);
     setIsGerenciarClientesModalOpen(true);
   };
 
-  const handleNovaGeradora = () => {
-    setIsNovaGeradoraModalOpen(true);
+  const handleNovaUsina = () => {
+    setIsNovaUsinaModalOpen(true);
   };
 
-  // Adicionar nova geradora
-  const handleSaveNewGeradora = (novaGeradora: UsinaGeradora) => {
-    setGeradoras(geradoras => [...geradoras, novaGeradora]);
-    console.log("Nova geradora adicionada:", novaGeradora);
+  // Adicionar nova usina
+  const handleSaveNewUsina = async (novaUsina: UsinaGeradora) => {
+    setUsinas(usinas => [...usinas, novaUsina]);
+    console.log("Nova usina adicionada:", novaUsina);
   };
 
-  // Atualizar geradora existente
-  const handleUpdateGeradora = (geradoraAtualizada: UsinaGeradora) => {
-    console.log("Atualizando geradora:", geradoraAtualizada);
+  // Atualizar usina existente
+  const handleUpdateUsina = async (usinaAtualizada: UsinaGeradora) => {
+    console.log("Atualizando usina:", usinaAtualizada);
     
-    setGeradoras(geradoras => 
-      geradoras.map(g => 
-        g.id === geradoraAtualizada.id ? geradoraAtualizada : g
-      )
-    );
-    
-    toast({
-      title: "Geradora atualizada",
-      description: `As alterações na geradora ${geradoraAtualizada.nome} foram salvas com sucesso.`,
-    });
-    
-    console.log("Geradora atualizada:", geradoraAtualizada);
+    try {
+      const resultado = await usinaService.update(usinaAtualizada.id, usinaAtualizada);
+      
+      if (resultado) {
+        setUsinas(usinas => 
+          usinas.map(u => 
+            u.id === usinaAtualizada.id ? resultado : u
+          )
+        );
+        
+        toast({
+          title: "Usina atualizada",
+          description: `As alterações na usina ${usinaAtualizada.nome} foram salvas com sucesso.`,
+        });
+        
+        console.log("Usina atualizada:", resultado);
+      } else {
+        throw new Error("Falha ao atualizar usina");
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar usina:", error);
+      toast({
+        title: "Erro ao atualizar",
+        description: "Ocorreu um erro ao atualizar a usina. Tente novamente.",
+        variant: "destructive"
+      });
+    }
   };
   
-  // Excluir geradora
-  const handleDeleteGeradora = (geradora: UsinaGeradora) => {
-    setGeradoras(geradoras => geradoras.filter(g => g.id !== geradora.id));
-    toast({
-      title: "Geradora excluída",
-      description: `A geradora ${geradora.nome} foi excluída com sucesso`,
-    });
-    console.log("Geradora excluída:", geradora);
+  // Excluir usina
+  const handleDeleteUsina = async (usina: UsinaGeradora) => {
+    try {
+      const sucesso = await usinaService.delete(usina.id);
+      
+      if (sucesso) {
+        setUsinas(usinas => usinas.filter(u => u.id !== usina.id));
+        toast({
+          title: "Usina excluída",
+          description: `A usina ${usina.nome} foi excluída com sucesso`,
+        });
+        console.log("Usina excluída:", usina);
+      } else {
+        throw new Error("Falha ao excluir usina");
+      }
+    } catch (error) {
+      console.error("Erro ao excluir usina:", error);
+      toast({
+        title: "Erro ao excluir",
+        description: "Ocorreu um erro ao excluir a usina. Tente novamente.",
+        variant: "destructive"
+      });
+    }
   };
 
   // Realizar busca quando o usuário pressionar Enter
@@ -166,15 +171,15 @@ const GeradorasPage = () => {
     <div className="p-8">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Geradoras</h1>
+          <h1 className="text-2xl font-bold">Usinas Geradoras</h1>
           <p className="text-muted-foreground">Gerencie suas usinas geradoras de energia solar</p>
         </div>
         <Button 
           className="bg-green-600 hover:bg-green-700" 
-          onClick={handleNovaGeradora}
+          onClick={handleNovaUsina}
         >
           <span className="mr-2">+</span>
-          Nova Geradora
+          Nova Usina
         </Button>
       </div>
 
@@ -212,91 +217,104 @@ const GeradorasPage = () => {
         </Select>
       </div>
 
-      <div className="bg-white rounded-md border">
-        <div className="grid grid-cols-6 px-6 py-3 border-b text-sm font-medium text-gray-500">
-          <div>Nome</div>
-          <div>Potência</div>
-          <div>Localização</div>
-          <div>Status</div>
-          <div>Clientes Vinculados</div>
-          <div className="text-right">Ações</div>
+      {loading ? (
+        <div className="bg-white rounded-md border p-8 text-center">
+          <p>Carregando usinas geradoras...</p>
         </div>
-        
-        {geradorasFiltradas.length > 0 ? (
-          geradorasFiltradas.map((geradora) => (
-            <div key={geradora.id} className="grid grid-cols-6 px-6 py-4 border-b last:border-0 items-center">
-              <div className="flex items-center">
-                <div className="h-8 w-8 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center font-medium mr-3">
-                  <Zap className="h-4 w-4" />
-                </div>
-                <span className="font-medium">{geradora.nome}</span>
-              </div>
-              <div>{geradora.potencia}</div>
-              <div>{geradora.localizacao}</div>
-              <div>
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  {geradora.status}
-                </span>
-              </div>
-              <div>{geradora.clientesVinculados}</div>
-              <div className="text-right">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <MoreVertical className="h-5 w-5" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleVerDetalhes(geradora)}>
-                      <Eye className="h-4 w-4 mr-2" />
-                      Ver Detalhes
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleEditar(geradora)}>
-                      <Edit className="h-4 w-4 mr-2" />
-                      Editar
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleGerenciarClientes(geradora)}>
-                      <Users className="h-4 w-4 mr-2" />
-                      Gerenciar Clientes
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-          ))
-        ) : (
-          <div className="px-6 py-8 text-center text-gray-500">
-            Nenhuma geradora encontrada com os filtros selecionados
+      ) : (
+        <div className="bg-white rounded-md border">
+          <div className="grid grid-cols-6 px-6 py-3 border-b text-sm font-medium text-gray-500">
+            <div>Nome</div>
+            <div>Potência</div>
+            <div>Localização</div>
+            <div>Status</div>
+            <div>Clientes Vinculados</div>
+            <div className="text-right">Ações</div>
           </div>
-        )}
-      </div>
+          
+          {usinasFiltradas.length > 0 ? (
+            usinasFiltradas.map((usina) => (
+              <div key={usina.id} className="grid grid-cols-6 px-6 py-4 border-b last:border-0 items-center">
+                <div className="flex items-center">
+                  <div className="h-8 w-8 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center font-medium mr-3">
+                    <Zap className="h-4 w-4" />
+                  </div>
+                  <span className="font-medium">{usina.nome}</span>
+                </div>
+                <div>{usina.potencia}</div>
+                <div>{usina.localizacao}</div>
+                <div>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    usina.status === 'ativo' ? 'bg-green-100 text-green-800' : 
+                    usina.status === 'inativo' ? 'bg-red-100 text-red-800' : 
+                    'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {usina.status === 'ativo' ? 'Ativo' : 
+                     usina.status === 'inativo' ? 'Inativo' : 
+                     'Em Manutenção'}
+                  </span>
+                </div>
+                <div>{usina.clientesVinculados}</div>
+                <div className="text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreVertical className="h-5 w-5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleVerDetalhes(usina)}>
+                        <Eye className="h-4 w-4 mr-2" />
+                        Ver Detalhes
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleEditar(usina)}>
+                        <Edit className="h-4 w-4 mr-2" />
+                        Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleGerenciarClientes(usina)}>
+                        <Users className="h-4 w-4 mr-2" />
+                        Gerenciar Clientes
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="px-6 py-8 text-center text-gray-500">
+              {usinas.length === 0 ? 
+                "Nenhuma usina geradora cadastrada. Clique em 'Nova Usina' para adicionar." : 
+                "Nenhuma usina encontrada com os filtros selecionados"}
+            </div>
+          )}
+        </div>
+      )}
 
       <DetalhesUsinaModal
         isOpen={isDetalheGeradoraModalOpen}
         onClose={() => setIsDetalheGeradoraModalOpen(false)}
-        geradora={geradoraSelecionada}
+        geradora={usinaSelecionada}
       />
       
-      <NovaGeradoraModal
-        isOpen={isNovaGeradoraModalOpen}
-        onClose={() => setIsNovaGeradoraModalOpen(false)}
-        onSave={handleSaveNewGeradora}
-        geradoras={geradoras}
-        isPortalGeradora={true}
+      <NovaUsinaModal
+        isOpen={isNovaUsinaModalOpen}
+        onClose={() => setIsNovaUsinaModalOpen(false)}
+        onSave={handleSaveNewUsina}
+        usinas={usinas}
       />
       
       <EditarUsinaModal
         isOpen={isEditarGeradoraModalOpen}
         onClose={() => setIsEditarGeradoraModalOpen(false)}
-        geradora={geradoraSelecionada}
-        onSave={handleUpdateGeradora}
-        onDelete={handleDeleteGeradora}
+        geradora={usinaSelecionada}
+        onSave={handleUpdateUsina}
+        onDelete={handleDeleteUsina}
       />
       
       <GerenciarClientesUsinaModal
         isOpen={isGerenciarClientesModalOpen}
         onClose={() => setIsGerenciarClientesModalOpen(false)}
-        geradora={geradoraSelecionada}
+        geradora={usinaSelecionada}
       />
     </div>
   );

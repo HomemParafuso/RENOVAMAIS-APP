@@ -1,73 +1,115 @@
-# Welcome to your Lovable project
+# Renova Mais Energia APP
 
-## Project info
+Aplicativo para gerenciamento de energia solar, com portais para administradores, clientes e geradoras.
 
-**URL**: https://lovable.dev/projects/8d27fbad-2167-417a-838a-f7e814082b08
+## Visão Geral
 
-## How can I edit this code?
+O Renova Mais Energia é uma plataforma completa para gerenciamento de energia solar, permitindo que geradoras gerenciem seus clientes, faturas e relatórios, enquanto os clientes podem acompanhar seu consumo e faturas.
 
-There are several ways of editing your application.
+## Tecnologias Utilizadas
 
-**Use Lovable**
+Este projeto é construído com:
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/8d27fbad-2167-417a-838a-f7e814082b08) and start prompting.
+- **Frontend**:
+  - React
+  - TypeScript
+  - Vite
+  - Tailwind CSS
+  - shadcn/ui (componentes baseados em Radix UI)
+  - React Router
+  - React Query
+  - React Hook Form
+  - Zod (validação)
+  - Recharts (gráficos)
 
-Changes made via Lovable will be committed automatically to this repo.
+- **Backend**:
+  - Firebase Firestore (banco de dados NoSQL)
+  - Firebase Authentication (autenticação)
+  - Firebase Hosting (opcional para hospedagem)
 
-**Use your preferred IDE**
+## Configuração do Projeto
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Pré-requisitos
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- Node.js (v18+)
+- npm ou yarn
 
-Follow these steps:
+### Instalação
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+# Clonar o repositório
+git clone https://github.com/seu-usuario/renovamais-app.git
+cd renovamais-app
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# Instalar dependências
+npm install
 
-# Step 3: Install the necessary dependencies.
-npm i
+# Configurar variáveis de ambiente
+# Copie o arquivo .env.example para .env e preencha com suas credenciais
+cp .env.example .env
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Iniciar o servidor de desenvolvimento
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+### Variáveis de Ambiente
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Crie um arquivo `.env` na raiz do projeto com as seguintes variáveis:
 
-**Use GitHub Codespaces**
+```
+# Firebase
+VITE_FIREBASE_API_KEY=sua_api_key_do_firebase
+VITE_FIREBASE_AUTH_DOMAIN=seu_projeto.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=seu_projeto_id
+VITE_FIREBASE_STORAGE_BUCKET=seu_projeto.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=seu_messaging_sender_id
+VITE_FIREBASE_APP_ID=seu_app_id
+VITE_FIREBASE_MEASUREMENT_ID=seu_measurement_id
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Estrutura do Projeto
 
-## What technologies are used for this project?
+```
+src/
+├── admin/            # Portal do administrador
+├── components/       # Componentes compartilhados
+├── context/          # Contextos React (auth, notificações, etc.)
+├── hooks/            # Hooks personalizados
+├── lib/              # Bibliotecas e utilitários
+├── pages/            # Páginas principais
+├── portal-cliente/   # Portal do cliente
+├── portal-geradora/  # Portal da geradora
+├── services/         # Serviços de API
+└── utils/            # Funções utilitárias
+```
 
-This project is built with:
+## Migração para Firebase
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Recentemente, migramos o backend do PlanetScale para o Firebase. Para mais informações sobre essa migração, consulte o documento [FIREBASE_MIGRATION.md](docs/FIREBASE_MIGRATION.md).
 
-## How can I deploy this project?
+Anteriormente, o projeto utilizava o Supabase, depois o PlanetScale. Para informações sobre essas migrações anteriores, consulte:
+- [PLANETSCALE_MIGRATION.md](docs/PLANETSCALE_MIGRATION.md)
+- [DATABASE_OPTIONS.md](docs/DATABASE_OPTIONS.md)
 
-Simply open [Lovable](https://lovable.dev/projects/8d27fbad-2167-417a-838a-f7e814082b08) and click on Share -> Publish.
+## Scripts Disponíveis
 
-## Can I connect a custom domain to my Lovable project?
+- `npm run dev` - Inicia o servidor de desenvolvimento
+- `npm run build` - Compila o projeto para produção
+- `npm run build:dev` - Compila o projeto para ambiente de desenvolvimento
+- `npm run preview` - Visualiza a versão compilada localmente
+- `npm run lint` - Executa o linter para verificar problemas de código
+- `npm run test` - Executa os testes
+- `npm run test:watch` - Executa os testes em modo de observação
+- `npm run test:coverage` - Executa os testes com relatório de cobertura
 
-Yes, you can!
+## Contribuição
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+1. Faça um fork do projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/nova-feature`)
+3. Faça commit das suas alterações (`git commit -m 'Adiciona nova feature'`)
+4. Faça push para a branch (`git push origin feature/nova-feature`)
+5. Abra um Pull Request
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+## Licença
+
+Este projeto está licenciado sob a licença MIT - veja o arquivo LICENSE para mais detalhes.
