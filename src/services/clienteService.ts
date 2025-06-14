@@ -21,6 +21,9 @@ export interface Imovel {
   apelido: string;
   codigo: string;
   endereco: string;
+  cidade: string;
+  estado: string;
+  cep: string;
 }
 
 // Interface para um cliente no Firestore
@@ -63,6 +66,7 @@ export interface ClienteApp extends Cliente {
   dataAdesao?: string;
   dataCriacao?: string;
   imoveis?: Imovel[];
+  potenciaContratadaTotal?: number;
 }
 
 /**
@@ -91,7 +95,7 @@ function mapFirestoreToCliente(doc: any): ClienteApp {
     
     // Campos para compatibilidade com código existente
     cpf: data.cpf || data.cpfCnpj || '',
-    tipoCalculo: data.tipoCalculo || '',
+    tipoCalculo: data.tipoCalculo || 'percentual',
     percentualEconomia: data.percentualEconomia || 0,
     fonteTarifa: data.fonteTarifa || '',
     tusd: data.tusd || 0,
@@ -103,7 +107,8 @@ function mapFirestoreToCliente(doc: any): ClienteApp {
     dataAdesao: data.dataAdesao || '',
     dataCriacao: data.dataCriacao || data.dataCadastro || '',
     userId: data.userId,
-    imoveis: data.imoveis || []
+    imoveis: data.imoveis || [],
+    potenciaContratadaTotal: data.potenciaContratadaTotal || 0
   };
 }
 
