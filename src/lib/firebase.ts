@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, query, where, orderBy, limit, startAfter, onSnapshot, QueryConstraint, DocumentData, QueryDocumentSnapshot, Timestamp, WhereFilterOp } from 'firebase/firestore';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, User as FirebaseUser, updateProfile } from 'firebase/auth';
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 
 // Verificar se as variáveis de ambiente estão sendo carregadas corretamente
 console.log("Variáveis de ambiente do Firebase:", {
@@ -45,6 +46,22 @@ export const db = getFirestore(app);
 // Inicializar Authentication
 export const auth = getAuth(app);
 
+// Inicializar Storage
+export const storage = getStorage(app);
+
+// Funções de Storage
+export const uploadFile = async (file: File, path: string): Promise<string> => {
+  const storageRef = ref(storage, path);
+  const snapshot = await uploadBytes(storageRef, file);
+  const downloadURL = await getDownloadURL(snapshot.ref);
+  return downloadURL;
+};
+
+export const deleteFile = async (fileUrl: string): Promise<void> => {
+  const fileRef = ref(storage, fileUrl);
+  await deleteObject(fileRef);
+};
+
 // Tipos
 export interface User {
   id: string;
@@ -59,11 +76,21 @@ export interface User {
 export interface Fatura {
   id?: string;
   userId: string;
-  amount: number;
+  clienteId?: string;
+  amount: number; // Valor calculado
+  valorTotalExtraido?: number; // Valor total lido do PDF
   dueDate: Date;
   status: 'pending' | 'paid' | 'overdue';
   description?: string;
   reference?: string;
+  leituraAnterior?: number;
+  leituraAtual?: number;
+  codigoConcessionaria?: string;
+  dataStatus?: Date; // Nova data do status
+  pdfUrl?: string; // Adicionando a propriedade pdfUrl
+  tusd?: number;
+  te?: number;
+  valorIluminacao?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -109,6 +136,15 @@ export const faturaFromFirestore = (doc: DocumentData): Fatura => {
     status: data.status,
     description: data.description,
     reference: data.reference,
+    valorTotalExtraido: data.valorTotalExtraido || undefined,
+    leituraAnterior: data.leituraAnterior || undefined,
+    leituraAtual: data.leituraAtual || undefined,
+    codigoConcessionaria: data.codigoConcessionaria || undefined,
+    dataStatus: data.dataStatus ? fromFirestoreDate(data.dataStatus) : undefined,
+    pdfUrl: data.pdfUrl || undefined,
+    tusd: data.tusd || undefined,
+    te: data.te || undefined,
+    valorIluminacao: data.valorIluminacao || undefined,
     createdAt: fromFirestoreDate(data.createdAt),
     updatedAt: fromFirestoreDate(data.updatedAt)
   };
@@ -147,34 +183,33 @@ export const faturaToFirestore = (fatura: Partial<Fatura>) => {
     data.updatedAt = toFirestoreDate(fatura.updatedAt);
   }
   
+  if (fatura.dataStatus) {
+    data.dataStatus = toFirestoreDate(fatura.dataStatus);
+  }
+  
+  if (fatura.pdfUrl) {
+    data.pdfUrl = fatura.pdfUrl;
+  }
+  
+  if (fatura.tusd) {
+    data.tusd = fatura.tusd;
+  }
+  
+  if (fatura.te) {
+    data.te = fatura.te;
+  }
+  
+  if (fatura.valorIluminacao) {
+    data.valorIluminacao = fatura.valorIluminacao;
+  }
+  
   // Remover o ID, pois ele é usado como ID do documento
   delete data.id;
   
   return data;
 };
 
-// Exportar funções e objetos úteis do Firebase
-export {
-  collection,
-  doc,
-  setDoc,
-  getDoc,
-  getDocs,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  query,
-  where,
-  orderBy,
-  limit,
-  startAfter,
-  onSnapshot,
-  Timestamp,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-  updateProfile
-};
-
-export type { FirebaseUser, QueryConstraint, QueryDocumentSnapshot, WhereFilterOp };
+export { collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, query, where, orderBy, limit, startAfter, onSnapshot, Timestamp } from 'firebase/firestore';
+export type { QueryConstraint, QueryDocumentSnapshot, WhereFilterOp, DocumentData } from 'firebase/firestore';
+export type { User as FirebaseUser } from 'firebase/auth';
+export { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from 'firebase/auth'; 

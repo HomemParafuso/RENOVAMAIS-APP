@@ -1,2 +1,2 @@
-import FaturasPage from '@/pages/FaturasPage';
-export { default } from '@/pages/FaturasPage';
+import FaturasPage from '@/portal-geradora/pages/FaturasPage';
+export { default } from '@/portal-geradora/pages/FaturasPage';

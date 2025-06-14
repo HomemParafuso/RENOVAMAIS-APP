@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from "react";
-import { clienteService, ClienteApp } from "@/services/clienteService";
+import { clienteService, ClienteApp, Imovel } from "@/services/clienteService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -9,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogClose,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Tabs,
@@ -27,14 +27,26 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 // Componente para o formulário de informações pessoais
-const InformacoesForm = ({ readOnly = false, cliente }) => (
+const InformacoesForm = ({
+  readOnly = false,
+  cliente,
+  onClienteChange
+}: { 
+  readOnly?: boolean; 
+  cliente?: ClienteApp; 
+  onClienteChange: (clienteAtualizado: ClienteApp) => void; 
+}) => (
   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
     <div>
       <label htmlFor="nome" className="block text-sm font-medium text-gray-700 mb-1">Nome Completo</label>
       {readOnly ? (
         <div className="p-2 bg-gray-50 border rounded-md">{cliente?.nome || ""}</div>
       ) : (
-        <Input id="nome" defaultValue={cliente?.nome || ""} />
+        <Input 
+          id="nome" 
+          value={cliente?.nome || ""} 
+          onChange={(e) => onClienteChange({ ...cliente!, nome: e.target.value })} 
+        />
       )}
     </div>
     <div>
@@ -42,7 +54,12 @@ const InformacoesForm = ({ readOnly = false, cliente }) => (
       {readOnly ? (
         <div className="p-2 bg-gray-50 border rounded-md">{cliente?.email || ""}</div>
       ) : (
-        <Input id="email" type="email" defaultValue={cliente?.email || ""} />
+        <Input 
+          id="email" 
+          type="email" 
+          value={cliente?.email || ""} 
+          onChange={(e) => onClienteChange({ ...cliente!, email: e.target.value })} 
+        />
       )}
     </div>
     <div>
@@ -50,7 +67,11 @@ const InformacoesForm = ({ readOnly = false, cliente }) => (
       {readOnly ? (
         <div className="p-2 bg-gray-50 border rounded-md">{cliente?.cpf || ""}</div>
       ) : (
-        <Input id="cpf" defaultValue={cliente?.cpf || ""} />
+        <Input 
+          id="cpf" 
+          value={cliente?.cpf || ""} 
+          onChange={(e) => onClienteChange({ ...cliente!, cpf: e.target.value })} 
+        />
       )}
     </div>
     <div>
@@ -58,31 +79,48 @@ const InformacoesForm = ({ readOnly = false, cliente }) => (
       {readOnly ? (
         <div className="p-2 bg-gray-50 border rounded-md">{cliente?.telefone || ""}</div>
       ) : (
-        <Input id="telefone" defaultValue={cliente?.telefone || ""} />
+        <Input 
+          id="telefone" 
+          value={cliente?.telefone || ""} 
+          onChange={(e) => onClienteChange({ ...cliente!, telefone: e.target.value })} 
+        />
       )}
     </div>
     <div className="md:col-span-2">
       <label htmlFor="endereco" className="block text-sm font-medium text-gray-700 mb-1">Endereço Principal</label>
       {readOnly ? (
-        <div className="p-2 bg-gray-50 border rounded-md">Endereço de correspondência ou principal</div>
+        <div className="p-2 bg-gray-50 border rounded-md">{cliente?.endereco || "Endereço de correspondência ou principal"}</div>
       ) : (
-        <Input id="endereco" placeholder="Endereço de correspondência ou principal" />
+        <Input 
+          id="endereco" 
+          placeholder="Endereço de correspondência ou principal" 
+          value={cliente?.endereco || ""} 
+          onChange={(e) => onClienteChange({ ...cliente!, endereco: e.target.value })} 
+        />
       )}
     </div>
     <div>
       <label htmlFor="data" className="block text-sm font-medium text-gray-700 mb-1">Data de Adesão</label>
       {readOnly ? (
-        <div className="p-2 bg-gray-50 border rounded-md">dd / mm / aaaa</div>
+        <div className="p-2 bg-gray-50 border rounded-md">{cliente?.dataAdesao || "dd / mm / aaaa"}</div>
       ) : (
-        <Input id="data" placeholder="dd / mm / aaaa" />
+        <Input 
+          id="data" 
+          placeholder="dd / mm / aaaa" 
+          value={cliente?.dataAdesao || ""} 
+          onChange={(e) => onClienteChange({ ...cliente!, dataAdesao: e.target.value })} 
+        />
       )}
     </div>
     <div>
       <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">Status</label>
       {readOnly ? (
-        <div className="p-2 bg-gray-50 border rounded-md">Ativo</div>
+        <div className="p-2 bg-gray-50 border rounded-md">{cliente?.status || "Ativo"}</div>
       ) : (
-        <Select defaultValue="ativo">
+        <Select 
+          value={cliente?.status || "ativo"} 
+          onValueChange={(value) => onClienteChange({ ...cliente!, status: value as 'ativo' | 'inativo' | 'pendente' })} 
+        >
           <SelectTrigger id="status">
             <SelectValue placeholder="Selecione o status" />
           </SelectTrigger>
@@ -97,37 +135,40 @@ const InformacoesForm = ({ readOnly = false, cliente }) => (
     <div className="md:col-span-2">
       <label htmlFor="potencia" className="block text-sm font-medium text-gray-700 mb-1">Potência Contratada Total (kWp)</label>
       {readOnly ? (
-        <div className="p-2 bg-gray-50 border rounded-md">0</div>
+        <div className="p-2 bg-gray-50 border rounded-md">{cliente?.potenciaContratadaTotal || "0"}</div>
       ) : (
-        <Input id="potencia" type="number" defaultValue="0" />
+        <Input 
+          id="potencia" 
+          type="number" 
+          value={cliente?.potenciaContratadaTotal || 0} 
+          onChange={(e) => onClienteChange({ ...cliente!, potenciaContratadaTotal: parseFloat(e.target.value) || 0 })} 
+        />
       )}
     </div>
   </div>
 );
 
 // Componente para configuração de cálculo
-const ConfiguracaoForm = ({ readOnly = false, cliente }) => {
-  const [tipoCalculo, setTipoCalculo] = useState(cliente?.tipoCalculo || "percentual");
-  const [fonteTarifa, setFonteTarifa] = useState(cliente?.fonteTarifa || "global");
-  const [tipoIluminacao, setTipoIluminacao] = useState(cliente?.tipoIluminacao || "fixo");
-  
-  // Atualizar estados quando o cliente mudar
-  useEffect(() => {
-    if (cliente) {
-      setTipoCalculo(cliente.tipoCalculo || "percentual");
-      setFonteTarifa(cliente.fonteTarifa || "global");
-      setTipoIluminacao(cliente.tipoIluminacao || "fixo");
-    }
-  }, [cliente]);
-
+const ConfiguracaoForm = ({
+  readOnly = false,
+  cliente,
+  onClienteChange
+}: {
+  readOnly?: boolean;
+  cliente?: ClienteApp;
+  onClienteChange: (clienteAtualizado: ClienteApp) => void;
+}) => {
   return (
     <div className="space-y-4 mt-4">
       <div>
         <label htmlFor="tipo" className="block text-sm font-medium text-gray-700 mb-1">Tipo de Cálculo</label>
-          {readOnly ? (
-            <div className="p-2 bg-gray-50 border rounded-md">Percentual de Economia</div>
+        {readOnly ? (
+          <div className="p-2 bg-gray-50 border rounded-md">{cliente?.tipoCalculo === "percentual" ? "Percentual de Economia" : "Valor Nominal"}</div>
         ) : (
-          <Select defaultValue="percentual" onValueChange={setTipoCalculo}>
+          <Select
+            value={cliente?.tipoCalculo || "percentual"}
+            onValueChange={(value) => onClienteChange({ ...cliente!, tipoCalculo: value })}
+          >
             <SelectTrigger id="tipo">
               <SelectValue placeholder="Selecione o tipo de cálculo" />
             </SelectTrigger>
@@ -142,17 +183,25 @@ const ConfiguracaoForm = ({ readOnly = false, cliente }) => {
         <div>
           <label htmlFor="desconto" className="block text-sm font-medium text-gray-700 mb-1">Percentual de Desconto Nominal (s/ TU+TE)</label>
           {readOnly ? (
-            <div className="p-2 bg-gray-50 border rounded-md">10</div>
+            <div className="p-2 bg-gray-50 border rounded-md">{cliente?.percentualEconomia || "0"}</div>
           ) : (
-            <Input id="desconto" type="number" defaultValue="10" />
+            <Input
+              id="desconto"
+              type="number"
+              value={cliente?.percentualEconomia || 0}
+              onChange={(e) => onClienteChange({ ...cliente!, percentualEconomia: parseFloat(e.target.value) || 0 })}
+            />
           )}
         </div>
         <div>
           <label htmlFor="fonte" className="block text-sm font-medium text-gray-700 mb-1">Fonte da Tarifa (TU e TE)</label>
           {readOnly ? (
-            <div className="p-2 bg-gray-50 border rounded-md">Global (Configuração Geral)</div>
+            <div className="p-2 bg-gray-50 border rounded-md">{cliente?.fonteTarifa === "global" ? "Global (Configuração Geral)" : "Customizada"}</div>
           ) : (
-            <Select defaultValue="global" onValueChange={setFonteTarifa}>
+            <Select
+              value={cliente?.fonteTarifa || "global"}
+              onValueChange={(value) => onClienteChange({ ...cliente!, fonteTarifa: value })}
+            >
               <SelectTrigger id="fonte">
                 <SelectValue placeholder="Selecione a fonte" />
               </SelectTrigger>
@@ -164,22 +213,34 @@ const ConfiguracaoForm = ({ readOnly = false, cliente }) => {
           )}
         </div>
 
-        {fonteTarifa === "custom" && (
+        {cliente?.fonteTarifa === "custom" && (
           <>
             <div>
               <label htmlFor="tusd" className="block text-sm font-medium text-gray-700 mb-1">TUSD Customizado</label>
               {readOnly ? (
-                <div className="p-2 bg-gray-50 border rounded-md">0.00</div>
+                <div className="p-2 bg-gray-50 border rounded-md">{cliente?.tusd?.toFixed(2) || "0.00"}</div>
               ) : (
-                <Input id="tusd" type="number" placeholder="0.00" />
+                <Input
+                  id="tusd"
+                  type="number"
+                  placeholder="0.00"
+                  value={cliente?.tusd || 0}
+                  onChange={(e) => onClienteChange({ ...cliente!, tusd: parseFloat(e.target.value) || 0 })}
+                />
               )}
             </div>
             <div>
               <label htmlFor="te" className="block text-sm font-medium text-gray-700 mb-1">TE Customizado</label>
               {readOnly ? (
-                <div className="p-2 bg-gray-50 border rounded-md">0.00</div>
+                <div className="p-2 bg-gray-50 border rounded-md">{cliente?.te?.toFixed(2) || "0.00"}</div>
               ) : (
-                <Input id="te" type="number" placeholder="0.00" />
+                <Input
+                  id="te"
+                  type="number"
+                  placeholder="0.00"
+                  value={cliente?.te || 0}
+                  onChange={(e) => onClienteChange({ ...cliente!, te: parseFloat(e.target.value) || 0 })}
+                />
               )}
             </div>
           </>
@@ -188,9 +249,12 @@ const ConfiguracaoForm = ({ readOnly = false, cliente }) => {
         <div>
           <label htmlFor="iluminacao" className="block text-sm font-medium text-gray-700 mb-1">Tipo de Iluminação Pública (Padrão Cliente)</label>
           {readOnly ? (
-            <div className="p-2 bg-gray-50 border rounded-md">Valor Fixo (R$)</div>
+            <div className="p-2 bg-gray-50 border rounded-md">{cliente?.tipoIluminacao === "fixo" ? "Valor Fixo (R$)" : "Percentual"}</div>
           ) : (
-            <Select defaultValue="fixo" onValueChange={setTipoIluminacao}>
+            <Select
+              value={cliente?.tipoIluminacao || "fixo"}
+              onValueChange={(value) => onClienteChange({ ...cliente!, tipoIluminacao: value })}
+            >
               <SelectTrigger id="iluminacao">
                 <SelectValue placeholder="Selecione o tipo" />
               </SelectTrigger>
@@ -203,14 +267,28 @@ const ConfiguracaoForm = ({ readOnly = false, cliente }) => {
         </div>
         <div>
           <label htmlFor="valorIluminacao" className="block text-sm font-medium text-gray-700 mb-1">
-            {tipoIluminacao === 'fixo' 
+            {cliente?.tipoIluminacao === 'fixo' 
               ? 'Valor Fixo Iluminação (Padrão Cliente R$)' 
               : 'Valor percentual da tarifa TU + TE (%)'}
           </label>
           {readOnly ? (
-            <div className="p-2 bg-gray-50 border rounded-md">0</div>
+            <div className="p-2 bg-gray-50 border rounded-md">
+              {cliente?.tipoIluminacao === 'fixo' ? (cliente?.valorIluminacaoFixo?.toFixed(2) || "0.00") : (cliente?.valorIluminacaoPercentual || "0")}
+            </div>
           ) : (
-            <Input id="valorIluminacao" type="number" defaultValue="0" />
+            <Input
+              id="valorIluminacao"
+              type="number"
+              value={cliente?.tipoIluminacao === 'fixo' ? (cliente?.valorIluminacaoFixo || 0) : (cliente?.valorIluminacaoPercentual || 0)}
+              onChange={(e) => {
+                const value = parseFloat(e.target.value) || 0;
+                if (cliente?.tipoIluminacao === 'fixo') {
+                  onClienteChange({ ...cliente!, valorIluminacaoFixo: value });
+                } else {
+                  onClienteChange({ ...cliente!, valorIluminacaoPercentual: value });
+                }
+              }}
+            />
           )}
         </div>
       </div>
@@ -226,9 +304,10 @@ const ConfiguracaoForm = ({ readOnly = false, cliente }) => {
           <div>
             <h4 className="text-sm font-medium text-green-700">Explicação do Cálculo (Configuração Padrão Cliente)</h4>
             <p className="text-xs text-green-600 mt-1">
-              O cliente terá um desconto nominal de 10% sobre o valor de Tarifa de Uso (TU) e Tarifa de Energia (TE). A iluminação pública 
-              padrão será calculada como um valor fixo de R$ 0,00. A economia total considera o desconto nominal mais o valor da iluminação 
-              que o cliente deixa de pagar. As tarifas (TU e TE) serão obtidas da configuração global do sistema.
+              O cliente terá um desconto nominal de {cliente?.percentualEconomia || 0}% sobre o valor de Tarifa de Uso (TU) e Tarifa de Energia (TE). A iluminação pública 
+              padrão será calculada como um {cliente?.tipoIluminacao === 'fixo' ? `valor fixo de R$ ${cliente?.valorIluminacaoFixo?.toFixed(2) || '0.00'}` : `percentual de ${cliente?.valorIluminacaoPercentual || 0}%`}. A economia total considera o desconto nominal mais o valor da iluminação 
+              que o cliente deixa de pagar. As tarifas (TU e TE) serão obtidas da configuração {cliente?.fonteTarifa === 'global' ? 'global do sistema' : 'customizada'}.
+              {cliente?.fonteTarifa === 'custom' && ` (TUSD: ${cliente?.tusd?.toFixed(2) || '0.00'}, TE: ${cliente?.te?.toFixed(2) || '0.00'})`}
             </p>
           </div>
         </div>
@@ -238,412 +317,460 @@ const ConfiguracaoForm = ({ readOnly = false, cliente }) => {
 };
 
 // Modal para adicionar imóvel
-const AdicionarImovelModal = ({ isOpen, onClose, onSave, imoveis, setImoveis }) => {
-  const handleSaveImovel = () => {
-    // Coletar dados do formulário
-    const apelido = (document.getElementById('apelido') as HTMLInputElement)?.value;
-    const codigo = (document.getElementById('codigoConcessionaria') as HTMLInputElement)?.value;
-    const endereco = (document.getElementById('endereco') as HTMLInputElement)?.value;
-    const cidade = (document.getElementById('cidade') as HTMLInputElement)?.value;
-    const estado = (document.getElementById('estado') as HTMLInputElement)?.value;
-    const cep = (document.getElementById('cep') as HTMLInputElement)?.value;
-    
-    // Criar novo imóvel
-    const enderecoCompleto = `${endereco}, ${cidade} - ${estado}, CEP ${cep}`;
-    const novoImovel = {
-      apelido: apelido || 'Novo Imóvel',
-      codigo: codigo || '',
-      endereco: enderecoCompleto
-    };
-    
-    // Atualizar o estado
-    const imoveisAtualizados = [...imoveis, novoImovel];
-    setImoveis(imoveisAtualizados);
-    
-    // Chamar a função onSave para notificar o componente pai
-    if (onSave) {
-      onSave(imoveisAtualizados);
+const AdicionarImovelModal = ({
+  isOpen,
+  onClose,
+  onSave,
+  cliente,
+  onClienteChange
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (imovel: Imovel) => void;
+  cliente: ClienteApp;
+  onClienteChange: (clienteAtualizado: ClienteApp) => void;
+}) => {
+  const [novoImovel, setNovoImovel] = useState<Imovel>({
+    apelido: '',
+    codigo: '',
+    endereco: '',
+    cidade: '',
+    estado: '',
+    cep: '',
+  });
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (isOpen) {
+      setNovoImovel({
+        apelido: '',
+        codigo: '',
+        endereco: '',
+        cidade: '',
+        estado: '',
+        cep: '',
+      });
     }
+  }, [isOpen]);
+
+  const handleSaveImovel = async () => {
+    if (!cliente.id) {
+      toast({
+        title: "Erro",
+        description: "ID do cliente não disponível para salvar o imóvel.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const imoveisExistentes = Array.isArray(cliente.imoveis) ? cliente.imoveis : [];
+    const imoveisAtualizados = [...imoveisExistentes, novoImovel];
     
-    // Fechar o modal
-    onClose();
+    try {
+      onClienteChange({ ...cliente, imoveis: imoveisAtualizados });
+      await clienteService.update(cliente.id, { imoveis: imoveisAtualizados });
+      toast({
+        title: "Sucesso",
+        description: "Imóvel adicionado com sucesso!",
+      });
+      onSave(novoImovel);
+      onClose();
+    } catch (error) {
+      console.error("Erro ao salvar imóvel:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível adicionar o imóvel. Tente novamente.",
+        variant: "destructive",
+      });
+    }
   };
-  
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Adicionar Novo Imóvel</DialogTitle>
+          <DialogTitle>Adicionar Imóvel</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 mt-4">
+        <div className="grid gap-4 py-4">
           <div>
-            <label htmlFor="apelido" className="block text-sm font-medium text-gray-700 mb-1">Apelido do Imóvel</label>
-            <Input id="apelido" placeholder="Ex: Casa Principal, Apartamento, etc." />
+            <label htmlFor="apelido" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Apelido do Imóvel</label>
+            <Input 
+              id="apelido" 
+              placeholder="Casa da Praia"
+              value={novoImovel.apelido}
+              onChange={(e) => setNovoImovel({ ...novoImovel, apelido: e.target.value })}
+            />
           </div>
           <div>
-            <label htmlFor="codigoConcessionaria" className="block text-sm font-medium text-gray-700 mb-1 font-bold">Código da Concessionária</label>
-            <Input id="codigoConcessionaria" placeholder="Insira o código da concessionária" />
+            <label htmlFor="codigoConcessionaria" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Código da Concessionária</label>
+            <Input 
+              id="codigoConcessionaria" 
+              placeholder="9001234567"
+              value={novoImovel.codigo}
+              onChange={(e) => setNovoImovel({ ...novoImovel, codigo: e.target.value })}
+            />
           </div>
           <div>
-            <label htmlFor="endereco" className="block text-sm font-medium text-gray-700 mb-1">Endereço Completo</label>
-            <Input id="endereco" placeholder="Rua, número, complemento, bairro" />
+            <label htmlFor="endereco" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Endereço Completo</label>
+            <Input 
+              id="endereco" 
+              placeholder="Rua das Flores, 123"
+              value={novoImovel.endereco}
+              onChange={(e) => setNovoImovel({ ...novoImovel, endereco: e.target.value })}
+            />
           </div>
           <div>
-            <label htmlFor="cidade" className="block text-sm font-medium text-gray-700 mb-1">Cidade</label>
-            <Input id="cidade" placeholder="Cidade" />
+            <label htmlFor="cidade" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Cidade</label>
+            <Input 
+              id="cidade" 
+              placeholder="São Paulo"
+              value={novoImovel.cidade}
+              onChange={(e) => setNovoImovel({ ...novoImovel, cidade: e.target.value })}
+            />
           </div>
           <div>
-            <label htmlFor="estado" className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
-            <Input id="estado" placeholder="Estado" />
+            <label htmlFor="estado" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Estado</label>
+            <Input 
+              id="estado" 
+              placeholder="SP"
+              value={novoImovel.estado}
+              onChange={(e) => setNovoImovel({ ...novoImovel, estado: e.target.value })}
+            />
           </div>
           <div>
-            <label htmlFor="cep" className="block text-sm font-medium text-gray-700 mb-1">CEP</label>
-            <Input id="cep" placeholder="CEP" />
+            <label htmlFor="cep" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">CEP</label>
+            <Input 
+              id="cep" 
+              placeholder="00000-000"
+              value={novoImovel.cep}
+              onChange={(e) => setNovoImovel({ ...novoImovel, cep: e.target.value })}
+            />
           </div>
         </div>
-        <div className="flex justify-end gap-3 mt-6">
-          <DialogClose asChild>
-            <Button variant="outline">Cancelar</Button>
-          </DialogClose>
-          <Button className="bg-green-600 hover:bg-green-700" onClick={handleSaveImovel}>
-            Salvar Imóvel
-          </Button>
-        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button className="bg-green-600 hover:bg-green-700" onClick={handleSaveImovel}>Salvar Imóvel</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 };
 
 // Modal para editar imóvel
-const EditarImovelModal = ({ isOpen, onClose, imovel, onSave, imoveis, setImoveis }) => {
-  const handleSaveChanges = () => {
-    if (!imovel) return;
-    
-    // Coletar dados do formulário
-    const apelido = (document.getElementById('apelido') as HTMLInputElement)?.value;
-    const codigo = (document.getElementById('codigoConcessionaria') as HTMLInputElement)?.value;
-    const endereco = (document.getElementById('endereco') as HTMLInputElement)?.value;
-    
-    // Atualizar o imóvel no array de imóveis
-    const imoveisAtualizados = imoveis.map((item) => {
-      if (item.apelido === imovel.apelido && item.codigo === imovel.codigo) {
-        return { apelido, codigo, endereco };
-      }
-      return item;
-    });
-    
-    // Atualizar o estado
-    setImoveis(imoveisAtualizados);
-    
-    // Chamar a função onSave para notificar o componente pai
-    if (onSave) {
-      onSave(imoveisAtualizados);
+const EditarImovelModal = ({
+  isOpen,
+  onClose,
+  imovel,
+  onSave, 
+  cliente,
+  onClienteChange
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  imovel?: Imovel;
+  onSave: (imovelAtualizado: Imovel) => void; 
+  cliente: ClienteApp; 
+  onClienteChange: (clienteAtualizado: ClienteApp) => void; 
+}) => {
+  const [editedImovel, setEditedImovel] = useState<Imovel | undefined>(imovel);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    setEditedImovel(imovel);
+  }, [imovel]);
+
+  const handleSaveChanges = async () => {
+    if (!editedImovel || !imovel || !cliente.id) {
+      toast({
+        title: "Erro",
+        description: "Dados do imóvel ou ID do cliente inválidos para salvar.",
+        variant: "destructive",
+      });
+      return;
     }
-    
-    // Fechar o modal
-    onClose();
+
+    const imoveisExistentes = Array.isArray(cliente.imoveis) ? cliente.imoveis : [];
+    const imovelIndex = imoveisExistentes.findIndex(i => i.apelido === imovel.apelido && i.codigo === imovel.codigo);
+
+    if (imovelIndex !== undefined && imovelIndex !== -1) {
+      const imoveisAtualizados = [...imoveisExistentes];
+      imoveisAtualizados[imovelIndex] = editedImovel;
+      
+      try {
+        onClienteChange({ ...cliente, imoveis: imoveisAtualizados });
+        await clienteService.update(cliente.id, { imoveis: imoveisAtualizados });
+        toast({
+          title: "Sucesso",
+          description: "Imóvel atualizado com sucesso!",
+        });
+        onSave(editedImovel); 
+        onClose();
+      } catch (error) {
+        console.error("Erro ao salvar alterações do imóvel:", error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível salvar as alterações do imóvel. Tente novamente.",
+          variant: "destructive",
+        });
+      }
+    } else {
+      toast({
+        title: "Erro",
+        description: "Imóvel não encontrado para atualização.",
+        variant: "destructive",
+      });
+    }
   };
-  
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Editar Imóvel</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 mt-4">
+        <div className="grid gap-4 py-4">
           <div>
-            <label htmlFor="apelido" className="block text-sm font-medium text-gray-700 mb-1">Apelido do Imóvel</label>
-            <Input id="apelido" defaultValue={imovel?.apelido} />
+            <label htmlFor="editApelido" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Apelido do Imóvel</label>
+            <Input
+              id="editApelido"
+              placeholder="Casa da Praia"
+              value={editedImovel?.apelido || ''}
+              onChange={(e) => setEditedImovel({ ...editedImovel!, apelido: e.target.value })}
+            />
           </div>
           <div>
-            <label htmlFor="codigoConcessionaria" className="block text-sm font-medium text-gray-700 mb-1 font-bold">Código da Concessionária</label>
-            <Input id="codigoConcessionaria" defaultValue={imovel?.codigo} />
+            <label htmlFor="editCodigoConcessionaria" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Código da Concessionária</label>
+            <Input
+              id="editCodigoConcessionaria"
+              placeholder="9001234567"
+              value={editedImovel?.codigo || ''}
+              onChange={(e) => setEditedImovel({ ...editedImovel!, codigo: e.target.value })}
+            />
           </div>
           <div>
-            <label htmlFor="endereco" className="block text-sm font-medium text-gray-700 mb-1">Endereço Completo</label>
-            <Input id="endereco" defaultValue={imovel?.endereco} />
+            <label htmlFor="editEndereco" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Endereço Completo</label>
+            <Input
+              id="editEndereco"
+              placeholder="Rua das Flores, 123"
+              value={editedImovel?.endereco || ''}
+              onChange={(e) => setEditedImovel({ ...editedImovel!, endereco: e.target.value })}
+            />
+          </div>
+          <div>
+            <label htmlFor="editCidade" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Cidade</label>
+            <Input
+              id="editCidade"
+              placeholder="São Paulo"
+              value={editedImovel?.cidade || ''}
+              onChange={(e) => setEditedImovel({ ...editedImovel!, cidade: e.target.value })}
+            />
+          </div>
+          <div>
+            <label htmlFor="editEstado" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Estado</label>
+            <Input
+              id="editEstado"
+              placeholder="SP"
+              value={editedImovel?.estado || ''}
+              onChange={(e) => setEditedImovel({ ...editedImovel!, estado: e.target.value })}
+            />
+          </div>
+          <div>
+            <label htmlFor="editCep" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">CEP</label>
+            <Input
+              id="editCep"
+              placeholder="00000-000"
+              value={editedImovel?.cep || ''}
+              onChange={(e) => setEditedImovel({ ...editedImovel!, cep: e.target.value })}
+            />
           </div>
         </div>
-        <div className="flex justify-end gap-3 mt-6">
-          <DialogClose asChild>
-            <Button variant="outline">Cancelar</Button>
-          </DialogClose>
-          <Button className="bg-green-600 hover:bg-green-700" onClick={handleSaveChanges}>
-            Salvar Alterações
-          </Button>
-        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button className="bg-green-600 hover:bg-green-700" onClick={handleSaveChanges}>Salvar Alterações</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 };
 
 // Componente para imóveis vinculados
-const ImoveisForm = ({ readOnly = false, cliente, onImoveisChange }) => {
-  const [imoveis, setImoveis] = useState(
-    cliente?.imoveis || [
-      { apelido: 'CASA DE LAIANY', codigo: '7025079684', endereco: 'RUA MONSENHOR SEVERIANO, 38, CASA 8' }
-    ]
-  );
-  
-  // Atualizar imóveis quando o cliente mudar
-  useEffect(() => {
-    if (cliente?.imoveis) {
-      setImoveis(cliente.imoveis);
-    }
-  }, [cliente]);
-  
-  // Notificar o componente pai sobre mudanças nos imóveis
-  useEffect(() => {
-    if (onImoveisChange) {
-      onImoveisChange(imoveis);
-    }
-  }, [imoveis, onImoveisChange]);
-  
+const ImoveisForm = ({
+  readOnly = false,
+  cliente,
+  onClienteChange
+}: {
+  readOnly?: boolean;
+  cliente?: ClienteApp;
+  onClienteChange: (clienteAtualizado: ClienteApp) => void;
+}) => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [currentImovel, setCurrentImovel] = useState(null);
-  const { toast } = useToast();
+  const [imovelParaEdicao, setImovelParaEdicao] = useState<Imovel | undefined>(undefined);
 
   const handleAddImovel = () => {
-    const newImovel = {
-      apelido: 'NOVO IMÓVEL',
-      codigo: '1234567890',
-      endereco: 'ENDEREÇO DO NOVO IMÓVEL'
-    };
-    
-    setImoveis([...imoveis, newImovel]);
-    
-    toast({
-      title: "Imóvel adicionado",
-      description: "O imóvel foi adicionado com sucesso!",
-    });
+    // onClienteChange já está sendo chamado pelo AdicionarImovelModal agora
+    // Nenhuma lógica adicional necessária aqui, apenas fechar o modal
   };
 
-  const handleEditImovel = () => {
-    // Em um caso real, seria feita uma atualização no array de imóveis
-    toast({
-      title: "Imóvel atualizado",
-      description: "As informações do imóvel foram atualizadas com sucesso!",
-    });
+  const handleEditImovel = (imovel: Imovel) => {
+    setImovelParaEdicao(imovel);
+    setIsEditModalOpen(true);
   };
 
-  const handleRemoverImovel = (index) => {
-    const novosImoveis = [...imoveis];
-    novosImoveis.splice(index, 1);
-    setImoveis(novosImoveis);
+  const handleRemoverImovel = (index: number) => {
+    if (!cliente || !cliente.imoveis || !cliente.id) return; // Adicionado cliente.id
     
-    toast({
-      title: "Imóvel removido",
-      description: "O imóvel foi removido com sucesso!",
-      variant: "destructive",
-    });
+    const imoveisAtualizados = cliente.imoveis.filter((_, i) => i !== index);
+    
+    // Chamar clienteService.update para persistir a remoção
+    try {
+      onClienteChange({ ...cliente, imoveis: imoveisAtualizados }); // Atualizar estado local
+      clienteService.update(cliente.id, { imoveis: imoveisAtualizados }); // Persistir no DB
+      // Não é necessário toast aqui, pois o modal principal já trata os toasts de salvamento
+    } catch (error) {
+      console.error("Erro ao remover imóvel:", error);
+      // Aqui você pode adicionar um toast de erro se desejar
+    }
   };
 
   return (
-    <div className="mt-4">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-medium">Imóveis Vinculados ao Cliente</h3>
-        {!readOnly && (
-          <Button 
-            className="bg-green-600 hover:bg-green-700"
-            onClick={() => setIsAddModalOpen(true)}
-          >
-            <span className="mr-2">+</span>
-            Adicionar Imóvel
-          </Button>
-        )}
-      </div>
-      <div className="border rounded-md overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Apelido
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider font-bold">
-                Cód. Concessionária
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Endereço
-              </th>
-              {!readOnly && (
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Ações
-                </th>
-              )}
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {imoveis.map((imovel, index) => (
-              <tr key={index}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  {imovel.apelido}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-bold">
-                  {imovel.codigo}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {imovel.endereco}
-                </td>
-                {!readOnly && (
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreVertical className="h-5 w-5" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => {
-                          setCurrentImovel(imovel);
-                          setIsEditModalOpen(true);
-                        }}>
-                          Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleRemoverImovel(index)} className="text-red-600">
-                          Remover
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+    <div className="space-y-4 mt-4">
+      {!readOnly && (
+        <Button className="bg-green-600 hover:bg-green-700" onClick={() => setIsAddModalOpen(true)}>
+          Adicionar Novo Imóvel
+        </Button>
+      )}
 
-      <AdicionarImovelModal 
-        isOpen={isAddModalOpen} 
+      {cliente?.imoveis && cliente.imoveis.length > 0 ? (
+        <div className="border rounded-md">
+          {cliente.imoveis.map((imovel, index) => (
+            <div key={index} className="flex items-center justify-between p-4 border-b last:border-b-0">
+              <div>
+                <p className="font-medium">{imovel.apelido}</p>
+                <p className="text-sm text-gray-500">{imovel.endereco}</p>
+                <p className="text-sm text-gray-500">Cód. Concessionária: {imovel.codigo}</p>
+              </div>
+              {!readOnly && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <MoreVertical className="h-5 w-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleEditImovel(imovel)}>
+                      Editar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleRemoverImovel(index)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      Remover
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-center text-gray-500 py-4">Nenhum imóvel vinculado.</p>
+      )}
+
+      <AdicionarImovelModal
+        isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onSave={handleAddImovel}
-        imoveis={imoveis}
-        setImoveis={setImoveis}
+        cliente={cliente!} 
+        onClienteChange={onClienteChange} 
       />
 
-      <EditarImovelModal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        imovel={currentImovel}
-        onSave={handleEditImovel}
-        imoveis={imoveis}
-        setImoveis={setImoveis}
-      />
+      {imovelParaEdicao && (
+        <EditarImovelModal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setImovelParaEdicao(undefined);
+          }}
+          imovel={imovelParaEdicao}
+          onSave={() => { /* Vazio, pois a lógica de atualização está no modal */ }}
+          cliente={cliente!} 
+          onClienteChange={onClienteChange} 
+        />
+      )}
     </div>
   );
 };
 
 // Componente para o modal de edição ou visualização de cliente
-const EditarClienteModal = ({ 
-  isOpen, 
-  onClose, 
-  isViewOnly = false, 
-  clienteId 
-}: { 
-  isOpen: boolean; 
-  onClose: () => void; 
+const EditarClienteModal = ({
+  isOpen,
+  onClose,
+  isViewOnly = false,
+  clienteId
+}: {
+  isOpen: boolean;
+  onClose: () => void;
   isViewOnly?: boolean;
   clienteId?: string;
 }) => {
-  const [cliente, setCliente] = useState<ClienteApp | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("pessoal");
   const { toast } = useToast();
-  
-  // Carregar dados do cliente quando o modal for aberto
+  const [editedCliente, setEditedCliente] = useState<ClienteApp | undefined>(undefined);
+
   useEffect(() => {
     if (isOpen && clienteId) {
-      setLoading(true);
-      clienteService.getById(clienteId)
-        .then(data => {
-          setCliente(data);
-        })
-        .catch(error => {
-          console.error('Erro ao carregar cliente:', error);
+      const loadCliente = async () => {
+        try {
+          const cliente = await clienteService.getById(clienteId);
+          if (cliente) {
+            setEditedCliente(cliente);
+          } else {
+            toast({
+              title: "Erro",
+              description: "Cliente não encontrado.",
+              variant: "destructive",
+            });
+            onClose();
+          }
+        } catch (error) {
+          console.error("Erro ao carregar cliente:", error);
           toast({
-            title: "Erro ao carregar dados",
+            title: "Erro",
             description: "Não foi possível carregar os dados do cliente.",
             variant: "destructive",
           });
-        })
-        .finally(() => {
-          setLoading(false);
-        });
+          onClose();
+        }
+      };
+      loadCliente();
+    } else if (!isOpen) {
+      setEditedCliente(undefined);
+      setActiveTab("pessoal");
     }
-  }, [isOpen, clienteId]);
+  }, [isOpen, clienteId, toast, onClose]);
 
   const handleSaveChanges = async () => {
-    if (!cliente) return;
-    
-    try {
-      // Coletar dados do formulário - Informações Pessoais
-      const nome = (document.getElementById('nome') as HTMLInputElement)?.value;
-      const email = (document.getElementById('email') as HTMLInputElement)?.value;
-      const cpf = (document.getElementById('cpf') as HTMLInputElement)?.value;
-      const telefone = (document.getElementById('telefone') as HTMLInputElement)?.value;
-      const endereco = (document.getElementById('endereco') as HTMLInputElement)?.value;
-      const dataAdesao = (document.getElementById('data') as HTMLInputElement)?.value;
-      
-      // Coletar dados de Configuração de Cálculo
-      const tipoCalculo = (document.querySelector('#tipo .select-value') as HTMLElement)?.textContent || cliente.tipoCalculo || 'percentual';
-      const percentualEconomia = parseFloat((document.getElementById('desconto') as HTMLInputElement)?.value || '0');
-      const fonteTarifa = (document.querySelector('#fonte .select-value') as HTMLElement)?.textContent || cliente.fonteTarifa || 'global';
-      
-      // Valores de TUSD e TE (se aplicável)
-      let tusd = cliente.tusd || 0;
-      let te = cliente.te || 0;
-      
-      if (fonteTarifa === 'custom') {
-        tusd = parseFloat((document.getElementById('tusd') as HTMLInputElement)?.value || '0');
-        te = parseFloat((document.getElementById('te') as HTMLInputElement)?.value || '0');
-      }
-      
-      // Configurações de iluminação pública
-      const tipoIluminacao = (document.querySelector('#iluminacao .select-value') as HTMLElement)?.textContent || cliente.tipoIluminacao || 'fixo';
-      const valorIluminacao = parseFloat((document.getElementById('valorIluminacao') as HTMLInputElement)?.value || '0');
-      
-      // Preparar objeto com todos os dados atualizados
-      const clienteAtualizado = {
-        ...cliente,
-        nome,
-        email,
-        cpf,
-        telefone,
-        endereco,
-        dataAdesao,
-        tipoCalculo,
-        percentualEconomia,
-        fonteTarifa,
-        tusd,
-        te,
-        tipoIluminacao,
-        valorIluminacaoFixo: tipoIluminacao === 'fixo' ? valorIluminacao : cliente.valorIluminacaoFixo || 0,
-        valorIluminacaoPercentual: tipoIluminacao === 'percentual' ? valorIluminacao : cliente.valorIluminacaoPercentual || 0,
-      };
-      
-      console.log('Salvando cliente atualizado:', clienteAtualizado);
-      
-      // Atualizar cliente no Firebase
-      await clienteService.update(cliente.id, clienteAtualizado);
-      
-      // Atualizar o estado local para refletir as mudanças imediatamente
-      setCliente(clienteAtualizado);
-      
+    if (!editedCliente || !editedCliente.id) {
       toast({
-        title: "Alterações salvas",
-        description: "As alterações foram salvas com sucesso!",
+        title: "Erro",
+        description: "Dados do cliente inválidos para salvar.",
+        variant: "destructive",
       });
-      
-      // Recarregar a página para mostrar os dados atualizados
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
-      
+      return;
+    }
+    try {
+      await clienteService.update(editedCliente.id, editedCliente);
+      toast({
+        title: "Sucesso",
+        description: "Cliente atualizado com sucesso!",
+      });
       onClose();
     } catch (error) {
-      console.error('Erro ao salvar alterações:', error);
+      console.error("Erro ao salvar cliente:", error);
       toast({
-        title: "Erro ao salvar",
-        description: "Ocorreu um erro ao salvar as alterações.",
+        title: "Erro",
+        description: "Não foi possível salvar as alterações do cliente.",
         variant: "destructive",
       });
     }
@@ -662,28 +789,29 @@ const EditarClienteModal = ({
             <TabsTrigger value="imoveis">Imóveis Vinculados</TabsTrigger>
           </TabsList>
           <TabsContent value="informacoes">
-            {loading ? (
-              <div className="py-8 text-center">Carregando dados do cliente...</div>
+            {editedCliente ? (
+              <InformacoesForm readOnly={isViewOnly} cliente={editedCliente} onClienteChange={setEditedCliente} />
             ) : (
-              <InformacoesForm readOnly={isViewOnly} cliente={cliente} />
+              <div className="py-8 text-center">Carregando dados do cliente...</div>
             )}
           </TabsContent>
           <TabsContent value="configuracao">
-            <ConfiguracaoForm readOnly={isViewOnly} cliente={cliente} />
+            {editedCliente && (
+              <ConfiguracaoForm readOnly={isViewOnly} cliente={editedCliente} onClienteChange={setEditedCliente} />
+            )}
           </TabsContent>
           <TabsContent value="imoveis">
-            <ImoveisForm 
-              readOnly={isViewOnly} 
-              cliente={cliente} 
-              onImoveisChange={(imoveisAtualizados) => {
-                if (cliente) {
-                  setCliente({
-                    ...cliente,
-                    imoveis: imoveisAtualizados
-                  });
-                }
-              }} 
-            />
+            {editedCliente && (
+              <ImoveisForm 
+                readOnly={isViewOnly} 
+                cliente={editedCliente} 
+                onClienteChange={(updatedClient) => {
+                  if (updatedClient) {
+                    setEditedCliente(updatedClient);
+                  }
+                }}
+              />
+            )}
           </TabsContent>
         </Tabs>
         {!isViewOnly && (
@@ -702,3 +830,5 @@ const EditarClienteModal = ({
 };
 
 export default EditarClienteModal;
+
+

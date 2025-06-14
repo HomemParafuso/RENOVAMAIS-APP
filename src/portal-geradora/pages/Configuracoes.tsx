@@ -1,3 +1,3 @@
-import ConfiguracoesPage from "@/pages/ConfiguracoesPage";
+import ConfiguracoesPage from "@/portal-geradora/pages/ConfiguracoesPage";
 
-export { default } from '@/pages/ConfiguracoesPage';
+export { default } from '@/portal-geradora/pages/ConfiguracoesPage';

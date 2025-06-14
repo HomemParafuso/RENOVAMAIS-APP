@@ -21,7 +21,7 @@ export function Login() {
     try {
       setLoading(true);
       await login(email, password);
-      navigate('/dashboard');
+      navigate('/geradora');
     } catch (error) {
       console.error('Erro no login:', error);
     } finally {
@@ -66,6 +66,7 @@ export function Login() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    autoComplete="email"
                   />
                 </div>
                 <div className="space-y-2">
@@ -76,6 +77,7 @@ export function Login() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
+                    autoComplete="current-password"
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
@@ -102,6 +104,7 @@ export function Login() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    autoComplete="email"
                   />
                 </div>
                 <div className="space-y-2">

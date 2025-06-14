@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { db, doc, getDoc, setDoc, updateDoc, auth } from "@/lib/firebase";
 
 interface PixConfigModalProps {
   isOpen: boolean;
@@ -26,7 +27,44 @@ const PixConfigModal = ({ isOpen, onClose }: PixConfigModalProps) => {
   const [tipoChave, setTipoChave] = useState("");
   const [chave, setChave] = useState("");
 
-  const handleSave = () => {
+  // Carregar configurações existentes ao abrir o modal
+  useEffect(() => {
+    if (isOpen) {
+      const loadPixConfig = async () => {
+        try {
+          // Tentar carregar do Firebase primeiro
+          if (auth.currentUser) {
+            const userId = auth.currentUser.uid;
+            const configDocRef = doc(db, 'configuracoes', userId);
+            const docSnap = await getDoc(configDocRef);
+            
+            if (docSnap.exists() && docSnap.data().pixConfig) {
+              const config = docSnap.data().pixConfig;
+              setBanco(config.banco || "");
+              setTipoChave(config.tipoChave || "");
+              setChave(config.chave || "");
+              return;
+            }
+          }
+          
+          // Fallback para localStorage
+          const savedConfig = localStorage.getItem('pixConfig');
+          if (savedConfig) {
+            const config = JSON.parse(savedConfig);
+            setBanco(config.banco || "");
+            setTipoChave(config.tipoChave || "");
+            setChave(config.chave || "");
+          }
+        } catch (error) {
+          console.error("Erro ao carregar configuração PIX:", error);
+        }
+      };
+      
+      loadPixConfig();
+    }
+  }, [isOpen]);
+
+  const handleSave = async () => {
     if (!banco || !tipoChave || !chave) {
       toast({
         title: "Dados incompletos",
@@ -36,14 +74,54 @@ const PixConfigModal = ({ isOpen, onClose }: PixConfigModalProps) => {
       return;
     }
 
-    // Save PIX configuration to localStorage
     const pixConfig = { banco, tipoChave, chave };
+    
+    // Salvar no localStorage como fallback
     localStorage.setItem('pixConfig', JSON.stringify(pixConfig));
-
-    toast({
-      title: "Configuração PIX salva",
-      description: "As configurações do PIX foram salvas com sucesso!",
-    });
+    
+    // Salvar no Firebase se o usuário estiver autenticado
+    if (auth.currentUser) {
+      try {
+        const userId = auth.currentUser.uid;
+        const configDocRef = doc(db, 'configuracoes', userId);
+        
+        // Verificar se o documento já existe
+        const docSnap = await getDoc(configDocRef);
+        
+        if (docSnap.exists()) {
+          // Atualizar documento existente
+          await updateDoc(configDocRef, {
+            pixConfig,
+            updatedAt: new Date()
+          });
+        } else {
+          // Criar novo documento
+          await setDoc(configDocRef, {
+            pixConfig,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          });
+        }
+        
+        toast({
+          title: "Configuração PIX salva",
+          description: "As configurações do PIX foram salvas com sucesso no servidor!",
+        });
+      } catch (error) {
+        console.error("Erro ao salvar configuração PIX no Firebase:", error);
+        toast({
+          title: "Configuração salva localmente",
+          description: "As configurações foram salvas localmente, mas houve um erro ao salvar no servidor.",
+          variant: "warning",
+        });
+      }
+    } else {
+      toast({
+        title: "Configuração salva localmente",
+        description: "As configurações foram salvas apenas localmente. Faça login para salvar no servidor.",
+        variant: "warning",
+      });
+    }
 
     onClose();
   };

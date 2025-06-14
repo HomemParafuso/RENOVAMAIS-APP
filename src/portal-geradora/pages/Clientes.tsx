@@ -1,3 +1,3 @@
 import React from "react";
-import ClientesPage from "@/pages/ClientesPage";
-export { default } from '@/pages/ClientesPage';
+import ClientesPage from "@/portal-geradora/pages/ClientesPage";
+export { default } from '@/portal-geradora/pages/ClientesPage';

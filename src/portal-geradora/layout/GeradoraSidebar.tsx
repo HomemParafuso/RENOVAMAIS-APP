@@ -115,7 +115,7 @@ export default function GeradoraSidebar() {
         <SidebarItem to="/geradora/recebimentos" icon={CreditCard} active={currentPath.startsWith("/geradora/recebimentos")} collapsed={collapsed}>
           Recebimentos
         </SidebarItem>
-        <SidebarItem to="/relatorios" icon={BarChart} active={currentPath.startsWith("/relatorios")} collapsed={collapsed}>
+        <SidebarItem to="/geradora/relatorios" icon={BarChart} active={currentPath.startsWith("/geradora/relatorios")} collapsed={collapsed}>
           Relatórios
         </SidebarItem>
         <SidebarItem to="/geradora/configuracoes" icon={Settings} active={currentPath.startsWith("/geradora/configuracoes")} collapsed={collapsed}>

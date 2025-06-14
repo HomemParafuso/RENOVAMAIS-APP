@@ -8,6 +8,8 @@ import { toast } from "@/hooks/use-toast";
 import NovaFaturaModal from "@/components/fatura/NovaFaturaModal";
 import { useAuth } from '@/context/AuthContext';
 import { useInvoice } from '@/context/InvoiceContext';
+import { useCliente } from '@/context/ClienteContext';
+import { useUsina } from '@/context/UsinaContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { InvoiceList } from '@/components/invoices/InvoiceList';
 import { NotificationList } from '@/components/notifications/NotificationList';
@@ -75,6 +77,8 @@ export const Dashboard = () => {
   const [clientesBaixados, setClientesBaixados] = useState<string[]>([]);
   const { user } = useAuth();
   const { invoices, loading: invoicesLoading } = useInvoice();
+  const { clientes, loading: clientesLoading } = useCliente();
+  const { usinas, loading: usinasLoading } = useUsina();
 
   const totalAmount = invoices.reduce((sum, invoice) => sum + invoice.amount, 0);
   const pendingInvoices = invoices.filter((invoice) => invoice.status === 'pending');
@@ -84,10 +88,6 @@ export const Dashboard = () => {
   useEffect(() => {
     const carregarDadosReais = () => {
       try {
-        // Carregar clientes
-        const clientesArmazenados = localStorage.getItem('clientes');
-        const clientes = clientesArmazenados ? JSON.parse(clientesArmazenados) : [];
-        
         // Carregar faturas
         const faturasArmazenadas = localStorage.getItem('faturas');
         const faturas = faturasArmazenadas ? JSON.parse(faturasArmazenadas) : [];
@@ -105,7 +105,7 @@ export const Dashboard = () => {
         const mesAtual = new Date().getMonth();
         const anoAtual = new Date().getFullYear();
         
-        const clientesSemFaturasMes = clientes.filter((cliente: any) => {
+        const clientesSemFaturasMes = clientes.filter((cliente) => {
           if (cliente.status !== 'ativo') return false;
           if (clientesBaixadosData.includes(cliente.id)) return false;
           
@@ -123,7 +123,7 @@ export const Dashboard = () => {
         setClientesSemFaturas(clientesSemFaturasMes);
         
         // Calcular métricas
-        const clientesAtivos = clientes.filter((c: any) => c.status === 'ativo').length;
+        const clientesAtivos = clientes.filter((c) => c.status === 'ativo').length;
         const faturasPendentes = faturas.filter((f: any) => f.status === 'pendente').length;
         const faturasAtrasadas = faturas.filter((f: any) => {
           const vencimento = new Date(f.dataVencimento);
@@ -132,7 +132,7 @@ export const Dashboard = () => {
         
         // Calcular geração total baseada no período
         const multiplicador = activeTimeFrame === "3M" ? 0.5 : activeTimeFrame === "6M" ? 1 : 2;
-        const geracaoBase = 1280;
+        const geracaoBase = usinas.length * 320; // Estimativa de 320 kWh por usina
         const geracaoTotal = `${Math.floor(geracaoBase * multiplicador).toLocaleString()} kWh`;
         
         // Calcular receita mensal
@@ -165,10 +165,10 @@ export const Dashboard = () => {
         console.error('Erro ao carregar dados:', error);
         // Usar dados padrão em caso de erro
         setDadosConectados({
-          clientesAtivos: 1,
-          faturasPendentes: 1,
+          clientesAtivos: clientes.filter(c => c.status === 'ativo').length || 0,
+          faturasPendentes: 0,
           faturasAtrasadas: 0,
-          geracaoTotal: "1.280 kWh",
+          geracaoTotal: `${usinas.length * 320} kWh`,
           receitaMensal: [
             { name: 'Dez', receita: 0 },
             { name: 'Jan', receita: 0 },
@@ -181,8 +181,10 @@ export const Dashboard = () => {
       }
     };
 
-    carregarDadosReais();
-  }, [activeTimeFrame, clientesBaixados]);
+    if (!clientesLoading && !usinasLoading) {
+      carregarDadosReais();
+    }
+  }, [activeTimeFrame, clientesBaixados, clientes, usinas, clientesLoading, usinasLoading]);
 
   // Dados para o gráfico de pizza
   const economyData = [

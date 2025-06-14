@@ -64,4 +64,4 @@ export function Admin() {
       </Tabs>
     </div>
   );
-} 
+}

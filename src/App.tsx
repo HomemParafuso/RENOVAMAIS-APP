@@ -42,10 +42,10 @@ import ClienteNotificacoes from '@/portal-cliente/pages/ClienteNotificacoes';
 import ClientePerfil from '@/portal-cliente/pages/ClientePerfil';
 
 // Outras páginas
-import { Login } from '@/pages/Login';
-import Dashboard from '@/pages/Dashboard';
-import { Invoices } from '@/pages/Invoices';
-import { Admin } from '@/pages/Admin';
+import { Login } from '@/portal-geradora/pages/Login';
+import Dashboard from '@/portal-geradora/pages/Dashboard';
+import { Invoices } from '@/portal-geradora/pages/Invoices';
+import { Admin } from '@/portal-admin/pages/Admin';
 
 // Componente para proteger rotas
 function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode, requiredRole?: 'admin' | 'geradora' | 'client' }) {

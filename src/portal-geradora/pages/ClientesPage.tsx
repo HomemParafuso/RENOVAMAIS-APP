@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -200,60 +199,62 @@ const ClientesPage = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedClientes.map((cliente) => (
-                <TableRow key={cliente.id}>
-                  <TableCell className="py-4">
-                    <div className="flex items-center">
-                      <div className="h-8 w-8 bg-green-100 text-green-600 rounded-full flex items-center justify-center font-medium mr-3">
-                        {cliente.nome.charAt(0)}
+              {sortedClientes.map((cliente) => {
+                return (
+                  <TableRow key={cliente.id}>
+                    <TableCell className="py-4">
+                      <div className="flex items-center">
+                        <div className="h-8 w-8 bg-green-100 text-green-600 rounded-full flex items-center justify-center font-medium mr-3">
+                          {cliente.nome ? cliente.nome.charAt(0) : ''}
+                        </div>
+                        <span className="font-medium text-blue-600 hover:underline cursor-pointer" onClick={() => handleViewClient(cliente)}>{cliente.nome}</span>
                       </div>
-                      <span className="font-medium">{cliente.nome}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>{cliente.cpf || '-'}</TableCell>
-                  <TableCell>{cliente.tipoCalculo}</TableCell>
-                  <TableCell>{cliente.usina || '-'}</TableCell>
-                  <TableCell>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      {cliente.status}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreVertical className="h-5 w-5" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleViewClient(cliente)}>
-                          <Eye className="h-4 w-4 mr-2" />
-                          Ver Detalhes
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleEditClient(cliente)}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleEnviarConvite(cliente)}>
-                          <Send className="h-4 w-4 mr-2" />
-                          Enviar Convite
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => handleExcluirCliente(cliente)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 mr-2">
-                            <path d="M3 6h18"></path>
-                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                          </svg>
-                          Excluir Cliente
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
+                    </TableCell>
+                    <TableCell>{cliente.cpf || '-'}</TableCell>
+                    <TableCell>{cliente.tipoCalculo}</TableCell>
+                    <TableCell>{cliente.usina || '-'}</TableCell>
+                    <TableCell>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        {cliente.status}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreVertical className="h-5 w-5" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleViewClient(cliente)}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            Ver Detalhes
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEditClient(cliente)}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEnviarConvite(cliente)}>
+                            <Send className="h-4 w-4 mr-2" />
+                            Enviar Convite
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleExcluirCliente(cliente)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 mr-2">
+                              <path d="M3 6h18"></path>
+                              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                            </svg>
+                            Excluir Cliente
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         )}
@@ -265,14 +266,14 @@ const ClientesPage = () => {
             isOpen={isViewModalOpen}
             onClose={() => setIsViewModalOpen(false)}
             isViewOnly={true}
-            clienteId={clienteSelecionado.id.toString()}
+            clienteId={clienteSelecionado?.id?.toString() || ''}
           />
 
           <EditarClienteModal 
             isOpen={isEditModalOpen} 
             onClose={() => setIsEditModalOpen(false)}
             isViewOnly={false}
-            clienteId={clienteSelecionado.id.toString()}
+            clienteId={clienteSelecionado?.id?.toString() || ''}
           />
         </>
       )}

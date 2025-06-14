@@ -1,2 +1,2 @@
-import RelatoriosPage from '@/pages/RelatoriosPage';
-export { default } from '@/pages/RelatoriosPage';
+import RelatoriosPage from '@/portal-geradora/pages/RelatoriosPage';
+export { default } from '@/portal-geradora/pages/RelatoriosPage';

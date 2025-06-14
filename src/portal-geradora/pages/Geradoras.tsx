@@ -1,2 +1,2 @@
-import GeradorasPage from '@/pages/GeradorasPage';
-export { default } from '@/pages/GeradorasPage';
+import GeradorasPage from '@/portal-geradora/pages/GeradorasPage';
+export { default } from '@/portal-geradora/pages/GeradorasPage';

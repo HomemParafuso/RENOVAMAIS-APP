@@ -27,14 +27,22 @@ export default function GeradoraDashboard() {
     const carregarDados = async () => {
       setLoading(true);
       try {
+        console.log("Dashboard: geradora object:", geradora);
+        console.log("Dashboard: geradora ID:", geradora?.id);
+
         if (geradora?.id) {
           // Carregar e filtrar clientes
           const todosClientes = await clienteService.getAll();
+          console.log("Dashboard: Todos os clientes:", todosClientes);
           const clientes = todosClientes.filter(c => c.geradoraId === geradora.id);
+          console.log("Dashboard: Clientes filtrados pela geradora:", clientes);
           const clientesAtivos = clientes.filter(c => c.status === 'ativo').length;
+          console.log("Dashboard: Clientes ativos:", clientesAtivos);
 
           // Calcular estatísticas de usinas
+          console.log("Dashboard: Usinas recebidas do contexto:", usinas);
           const usinasAtivas = usinas.filter(u => u.status === 'ativo').length;
+          console.log("Dashboard: Usinas ativas:", usinasAtivas);
           const producaoMensalTotal = usinas.reduce((sum, usina) => sum + (usina.producaoMensalKWh || 0), 0);
 
           // Preparar dados para o gráfico de distribuição de clientes

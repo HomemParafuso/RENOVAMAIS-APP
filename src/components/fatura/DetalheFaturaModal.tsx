@@ -13,15 +13,7 @@ import QRCode from 'qrcode';
 import { IPixIntegration } from '@/integrations/pix/IPixIntegration';
 import { sicrediPix } from '@/integrations/pix/sicrediPix';
 import { sicoobPix } from '@/integrations/pix/sicoobPix';
-
-interface Fatura {
-  id: number;
-  cliente: string;
-  referencia: string;
-  vencimento: string;
-  valor: string;
-  status: string;
-}
+import { Fatura } from "@/lib/firebase";
 
 // Mapeia os códigos de banco para as implementações de integração PIX
 const pixIntegrations: { [key: string]: IPixIntegration } = {
@@ -56,14 +48,14 @@ const DetalheFaturaModal = ({
 
           if (integration) {
             // Assegura que o valor da fatura é um número formatado corretamente para o PIX
-            const valorFormatado = parseFloat(fatura.valor.replace('R$', '').replace('.', '').replace(',', '.')).toFixed(2);
+            const valorFormatado = (fatura.amount || 0).toFixed(2);
 
             const pixPayload = integration.generatePixPayload({
               nome: "RENOVVA MAIS", // Substituir pelo nome da empresa ou dinâmico se necessário
               chavepix: chave,
               valor: valorFormatado,
               cidade: "SAO PAULO", // Considerar tornar isso configurável no futuro
-              txtId: fatura.referencia || String(fatura.id), // Usar referência ou ID da fatura como ID da transação
+              txtId: fatura.reference || fatura.id,
             });
             setCodigoPixCopiaECola(pixPayload);
 
@@ -131,22 +123,22 @@ const DetalheFaturaModal = ({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm font-medium text-gray-500">Cliente</p>
-                  <p className="text-base">{fatura.cliente}</p>
+                  <p className="text-base">{fatura.description}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-500">Referência</p>
-                  <p className="text-base">{fatura.referencia || "-"}</p>
+                  <p className="text-base">{fatura.reference || "-"}</p>
                 </div>
               </div>
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm font-medium text-gray-500">Vencimento</p>
-                  <p className="text-base">{fatura.vencimento}</p>
+                  <p className="text-base">{fatura.dueDate?.toLocaleDateString('pt-BR')}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-500">Valor</p>
-                  <p className="text-base font-semibold">{fatura.valor}</p>
+                  <p className="text-base font-semibold">{fatura.amount?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
                 </div>
               </div>
               
@@ -154,10 +146,10 @@ const DetalheFaturaModal = ({
                 <p className="text-sm font-medium text-gray-500">Status</p>
                 <div className="mt-1">
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    fatura.status === "Pago" ? "bg-green-100 text-green-800" :
-                    fatura.status === "Atrasado" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"
+                    fatura.status === "paid" ? "bg-green-100 text-green-800" :
+                    fatura.status === "overdue" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"
                   }`}>
-                    {fatura.status}
+                    {fatura.status === 'paid' ? 'Pago' : fatura.status === 'overdue' ? 'Atrasado' : 'Pendente'}
                   </span>
                 </div>
               </div>
@@ -167,47 +159,19 @@ const DetalheFaturaModal = ({
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">Valor base (TU+TE)</span>
-                    <span className="text-sm">R$ 180,00</span>
+                    <span className="text-sm">{fatura.valorTotalExtraido?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) || '-'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Desconto (10%)</span>
-                    <span className="text-sm text-green-600">- R$ 18,00</span>
+                    <span className="text-sm text-gray-600">Desconto</span>
+                    <span className="text-sm text-green-600">- {((fatura.valorTotalExtraido || 0) - (fatura.amount || 0)).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Iluminação pública</span>
-                    <span className="text-sm">R$ 8,00</span>
+                    <span className="text-sm text-gray-600">Consumo</span>
+                    <span className="text-sm">{((fatura.leituraAtual || 0) - (fatura.leituraAnterior || 0)).toLocaleString('pt-BR')} kWh</span>
                   </div>
                   <div className="border-t border-gray-200 pt-2 mt-2 flex justify-between">
                     <span className="text-sm font-medium">Valor total</span>
-                    <span className="text-sm font-medium">{fatura.valor}</span>
-                  </div>
-                </div>
-                
-                <div className="mt-4">
-                  <p className="text-sm font-medium text-gray-700 mb-2">QR Code para Pagamento</p>
-                  <div className="flex flex-col items-center space-y-4 p-4 bg-white rounded-lg border border-gray-200">
-                    {qrCodeDataUrl ? (
-                      <img src={qrCodeDataUrl} alt="QR Code PIX" className="w-48 h-48" />
-                    ) : (
-                      <div className="w-48 h-48 flex items-center justify-center bg-gray-50 border border-gray-200 rounded-lg text-gray-500 text-center">
-                        Não foi possível gerar o QR Code.
-                      </div>
-                    )}
-                    
-                    <div className="w-full">
-                      <p className="text-xs text-gray-500 mb-1">Código PIX Copia e Cola</p>
-                      <div className="flex bg-gray-50 border border-gray-200 rounded-md">
-                        <div className="flex-grow p-2 text-xs font-mono overflow-auto whitespace-normal break-all max-h-20">
-                          {codigoPixCopiaECola}
-                        </div>
-                        <button 
-                          onClick={copyToClipboard} 
-                          className="p-2 bg-gray-100 border-l border-gray-200 hover:bg-gray-200 flex-shrink-0"
-                        >
-                          {copied ? <Check size={16} className="text-green-600" /> : <Copy size={16} />}
-                        </button>
-                      </div>
-                    </div>
+                    <span className="text-sm font-medium">{fatura.amount?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) || '-'}</span>
                   </div>
                 </div>
               </div>
