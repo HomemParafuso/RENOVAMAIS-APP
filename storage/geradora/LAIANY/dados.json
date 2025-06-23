@@ -1,0 +1,16 @@
+{
+  "nome": "Geradora de LAIANY",
+  "email": "ptacyanno@gmail.com",
+  "responsavel": "LAIANY",
+  "telefone": "84996010658",
+  "cnpj": "45571678000162",
+  "senha": "admin123",
+  "status": "ativo",
+  "dataCadastro": "2025-06-21T00:19:27.461Z",
+  "limiteUsuarios": 50,
+  "usuariosAtivos": 0,
+  "planoCobranca": {
+    "tipo": "percentual",
+    "percentual": 10
+  }
+}

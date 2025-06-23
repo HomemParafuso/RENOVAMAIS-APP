@@ -1,115 +1,126 @@
-# Renova Mais Energia APP
+# RENOVAMAIS-APP
 
-Aplicativo para gerenciamento de energia solar, com portais para administradores, clientes e geradoras.
+Aplicativo para gerenciamento de geradoras, usinas e clientes do sistema RENOVAMAIS.
 
-## Visão Geral
+## Sistema de Armazenamento Local
 
-O Renova Mais Energia é uma plataforma completa para gerenciamento de energia solar, permitindo que geradoras gerenciem seus clientes, faturas e relatórios, enquanto os clientes podem acompanhar seu consumo e faturas.
+O RENOVAMAIS-APP utiliza um sistema de armazenamento local baseado em arquivos JSON para persistência de dados. Este sistema permite o funcionamento offline e sincronização quando conectado.
 
-## Tecnologias Utilizadas
+### Estrutura de Armazenamento
 
-Este projeto é construído com:
+```
+storage/
+├── clientes/                  # Estrutura antiga (legado)
+│   └── clientes.json          # Lista de clientes no formato antigo
+├── geradora/                  # Nova estrutura
+│   ├── [NOME_GERADORA]/       # Pasta para cada geradora
+│   │   ├── dados.json         # Dados da geradora
+│   │   ├── clientes.json      # Lista resumida de clientes da geradora
+│   │   ├── usinas.json        # Lista resumida de usinas da geradora
+│   │   ├── clientes/          # Pasta com dados detalhados dos clientes
+│   │   │   └── [ID_CLIENTE]/  # Pasta para cada cliente
+│   │   │       └── dados.json # Dados detalhados do cliente
+│   │   └── usinas/            # Pasta com dados detalhados das usinas
+│   │       └── [ID_USINA]/    # Pasta para cada usina
+│   │           └── dados.json # Dados detalhados da usina
+│   └── [NOME_GERADORA2]/      # Outra geradora...
+└── geradoras.json             # Lista de todas as geradoras
+```
 
-- **Frontend**:
-  - React
-  - TypeScript
-  - Vite
-  - Tailwind CSS
-  - shadcn/ui (componentes baseados em Radix UI)
-  - React Router
-  - React Query
-  - React Hook Form
-  - Zod (validação)
-  - Recharts (gráficos)
+### Componentes do Sistema
 
-- **Backend**:
-  - Firebase Firestore (banco de dados NoSQL)
-  - Firebase Authentication (autenticação)
-  - Firebase Hosting (opcional para hospedagem)
+1. **Módulos de Armazenamento**:
+   - `src/lib/server-storage.js`: Funções para manipulação de arquivos no servidor
+   - `src/lib/local-storage-fallback.js`: Implementação de localStorage para ambiente Node.js
+   - `src/lib/init-local-clientes.ts`: Inicialização e sincronização de clientes
+   - `src/lib/init-local-geradoras.ts`: Inicialização e sincronização de geradoras
+   - `src/lib/init-local-usinas.ts`: Inicialização e sincronização de usinas
 
-## Configuração do Projeto
+2. **Componentes React**:
+   - `src/components/ClienteSyncInitializer.tsx`: Inicializa a sincronização de clientes
+   - `src/components/UsinaSyncInitializer.tsx`: Inicializa a sincronização de usinas
 
-### Pré-requisitos
+3. **Serviços**:
+   - `src/services/clienteService.ts`: Serviço para operações com clientes
+   - `src/services/geradoraService.ts`: Serviço para operações com geradoras
+   - `src/services/usinaService.ts`: Serviço para operações com usinas
+   - `src/services/syncService.ts`: Serviço para sincronização de dados
 
-- Node.js (v18+)
+## Scripts Utilitários
+
+### Migração de Dados
+
+O script `migrate-clientes.js` migra os dados da estrutura antiga para a nova estrutura:
+
+```bash
+node migrate-clientes.js
+```
+
+Este script:
+1. Carrega os clientes da estrutura antiga (`storage/clientes/clientes.json`)
+2. Carrega ou cria geradoras
+3. Migra os clientes para a nova estrutura, organizando-os por geradora
+4. Cria a estrutura de diretórios necessária
+
+### Inicialização com Migração
+
+O script `start-with-migration.js` executa a migração de dados (se necessário) e inicia o servidor:
+
+```bash
+node start-with-migration.js
+```
+
+Este script:
+1. Verifica se a migração já foi executada
+2. Executa a migração se necessário
+3. Inicia o servidor da aplicação
+
+### Upload para GitHub
+
+O script `upload-to-github.js` facilita o envio das alterações para o repositório GitHub:
+
+```bash
+node upload-to-github.js
+```
+
+Este script:
+1. Verifica se o Git está instalado
+2. Inicializa um repositório Git se necessário
+3. Configura o remote para o repositório RENOVAMAIS-APP
+4. Adiciona arquivos, faz commit e envia para o GitHub
+5. Gerencia autenticação com token se necessário
+
+## Desenvolvimento
+
+### Requisitos
+
+- Node.js (versão recomendada: 18.x ou superior)
 - npm ou yarn
 
 ### Instalação
 
-```sh
-# Clonar o repositório
-git clone https://github.com/seu-usuario/renovamais-app.git
-cd renovamais-app
-
+```bash
 # Instalar dependências
 npm install
 
-# Configurar variáveis de ambiente
-# Copie o arquivo .env.example para .env e preencha com suas credenciais
-cp .env.example .env
-
-# Iniciar o servidor de desenvolvimento
-npm run dev
+# Iniciar o servidor com migração automática
+node start-with-migration.js
 ```
 
-### Variáveis de Ambiente
+### Fluxo de Trabalho
 
-Crie um arquivo `.env` na raiz do projeto com as seguintes variáveis:
-
-```
-# Firebase
-VITE_FIREBASE_API_KEY=sua_api_key_do_firebase
-VITE_FIREBASE_AUTH_DOMAIN=seu_projeto.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=seu_projeto_id
-VITE_FIREBASE_STORAGE_BUCKET=seu_projeto.appspot.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=seu_messaging_sender_id
-VITE_FIREBASE_APP_ID=seu_app_id
-VITE_FIREBASE_MEASUREMENT_ID=seu_measurement_id
-```
-
-## Estrutura do Projeto
-
-```
-src/
-├── admin/            # Portal do administrador
-├── components/       # Componentes compartilhados
-├── context/          # Contextos React (auth, notificações, etc.)
-├── hooks/            # Hooks personalizados
-├── lib/              # Bibliotecas e utilitários
-├── pages/            # Páginas principais
-├── portal-cliente/   # Portal do cliente
-├── portal-geradora/  # Portal da geradora
-├── services/         # Serviços de API
-└── utils/            # Funções utilitárias
-```
-
-## Migração para Firebase
-
-Recentemente, migramos o backend do PlanetScale para o Firebase. Para mais informações sobre essa migração, consulte o documento [FIREBASE_MIGRATION.md](docs/FIREBASE_MIGRATION.md).
-
-Anteriormente, o projeto utilizava o Supabase, depois o PlanetScale. Para informações sobre essas migrações anteriores, consulte:
-- [PLANETSCALE_MIGRATION.md](docs/PLANETSCALE_MIGRATION.md)
-- [DATABASE_OPTIONS.md](docs/DATABASE_OPTIONS.md)
-
-## Scripts Disponíveis
-
-- `npm run dev` - Inicia o servidor de desenvolvimento
-- `npm run build` - Compila o projeto para produção
-- `npm run build:dev` - Compila o projeto para ambiente de desenvolvimento
-- `npm run preview` - Visualiza a versão compilada localmente
-- `npm run lint` - Executa o linter para verificar problemas de código
-- `npm run test` - Executa os testes
-- `npm run test:watch` - Executa os testes em modo de observação
-- `npm run test:coverage` - Executa os testes com relatório de cobertura
+1. Os dados são carregados dos arquivos JSON para o localStorage durante a inicialização
+2. As operações são realizadas no localStorage para melhor desempenho
+3. As alterações são sincronizadas com os arquivos JSON para persistência
+4. A sincronização ocorre automaticamente após cada operação
 
 ## Contribuição
 
-1. Faça um fork do projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/nova-feature`)
-3. Faça commit das suas alterações (`git commit -m 'Adiciona nova feature'`)
-4. Faça push para a branch (`git push origin feature/nova-feature`)
-5. Abra um Pull Request
+Para contribuir com o projeto:
 
-## Licença
-
-Este projeto está licenciado sob a licença MIT - veja o arquivo LICENSE para mais detalhes.
+1. Faça as alterações necessárias
+2. Execute o script de upload para GitHub:
+   ```bash
+   node upload-to-github.js
+   ```
+3. Siga as instruções para adicionar arquivos, fazer commit e enviar para o GitHub

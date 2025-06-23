@@ -1,66 +1,5 @@
-import { Geradora } from '@/context/GeradoraAuthContext';
-
-// Função para inicializar o banco de dados local com geradoras de exemplo
-export function initLocalGeradoras() {
-  // Verificar se já existem geradoras no localStorage
-  const geradorasSalvas = localStorage.getItem('geradoras');
-  
-  if (geradorasSalvas) {
-    console.log('Geradoras já inicializadas no localStorage');
-    return;
-  }
-  
-  // Criar geradoras de exemplo
-  const geradoras: Geradora[] = [
-    {
-      id: 'geradora-1',
-      email: 'geradora1@exemplo.com',
-      nome: 'Geradora Solar Ltda',
-      role: 'geradora',
-      isApproved: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      cnpj: '12.345.678/0001-90',
-      responsavel: 'João Silva',
-      telefone: '(11) 98765-4321',
-      endereco: 'Av. Paulista, 1000, São Paulo - SP',
-      status: 'ativo'
-    },
-    {
-      id: 'geradora-2',
-      email: 'geradora2@exemplo.com',
-      nome: 'Energia Renovável S.A.',
-      role: 'geradora',
-      isApproved: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      cnpj: '98.765.432/0001-10',
-      responsavel: 'Maria Oliveira',
-      telefone: '(21) 98765-4321',
-      endereco: 'Rua da Energia, 500, Rio de Janeiro - RJ',
-      status: 'ativo'
-    },
-    {
-      id: 'geradora-3',
-      email: 'geradora3@exemplo.com',
-      nome: 'Eco Energia Ltda',
-      role: 'geradora',
-      isApproved: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      cnpj: '45.678.901/0001-23',
-      responsavel: 'Carlos Santos',
-      telefone: '(31) 98765-4321',
-      endereco: 'Av. do Sol, 200, Belo Horizonte - MG',
-      status: 'ativo'
-    }
-  ];
-  
-  // Salvar geradoras no localStorage
-  localStorage.setItem('geradoras', JSON.stringify(geradoras));
-  
-  console.log('Geradoras inicializadas no localStorage:', geradoras);
-}
+import { Geradora } from '@/services/geradoraService';
+import { createClientesFileForGeradora } from './init-local-clientes';
 
 // Função para obter todas as geradoras do localStorage
 export function getLocalGeradoras(): Geradora[] {
@@ -79,18 +18,18 @@ export function getLocalGeradoras(): Geradora[] {
 }
 
 // Função para adicionar uma nova geradora ao localStorage
-export function addLocalGeradora(geradora: Omit<Geradora, 'id' | 'createdAt' | 'updatedAt' | 'role'>): Geradora {
+export function addLocalGeradora(geradora: Partial<Geradora>): Geradora {
   const geradoras = getLocalGeradoras();
   
   // Criar nova geradora
+  const now = new Date();
   const novaGeradora: Geradora = {
     id: `geradora-${Date.now()}`,
-    role: 'geradora',
-    isApproved: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    status: 'ativo',
-    ...geradora
+    nome: geradora.nome || 'Nova Geradora',
+    email: geradora.email || `geradora_${Date.now()}@example.com`,
+    dataCadastro: now.toISOString(),
+    ...geradora,
+    status: geradora.status || 'ativo'
   };
   
   // Adicionar à lista
@@ -98,6 +37,9 @@ export function addLocalGeradora(geradora: Omit<Geradora, 'id' | 'createdAt' | '
   
   // Salvar no localStorage
   localStorage.setItem('geradoras', JSON.stringify(geradoras));
+  
+  // Criar um arquivo de clientes para a nova geradora
+  createClientesFileForGeradora(novaGeradora.id, novaGeradora.nome);
   
   return novaGeradora;
 }
@@ -113,11 +55,15 @@ export function updateLocalGeradora(id: string, dados: Partial<Geradora>): Gerad
     return null;
   }
   
+  // Preservar a data de cadastro original
+  const dataCadastroOriginal = geradoras[index].dataCadastro;
+  
   // Atualizar dados
   const geradoraAtualizada: Geradora = {
     ...geradoras[index],
     ...dados,
-    updatedAt: new Date()
+    // Garantir que a data de cadastro seja preservada
+    dataCadastro: dataCadastroOriginal
   };
   
   // Substituir na lista
